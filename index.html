@@ -6,37 +6,51 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>GitCloud</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<link rel="icon" href="icon.ico">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 :root {
-  --bg: #07070A;
-  --surface: #0F0F14;
-  --surface2: #18181F;
-  --surface3: #222230;
-  --border: #2A2A38;
-  --accent: #E8A030;
-  --accent-glow: rgba(232,160,48,0.18);
-  --accent-dim: rgba(232,160,48,0.12);
-  --text: #EEEcE4;
-  --text2: #9999AA;
-  --text3: #55556A;
-  --danger: #E05050;
-  --success: #50C888;
-  --nav-h: 70px;
-  --r: 16px;
+  /* iOS Dark palette */
+  --bg:       #000000;
+  --bg1:      #1C1C1E;
+  --bg2:      #2C2C2E;
+  --bg3:      #3A3A3C;
+  --bg4:      #48484A;
+  --sep:      rgba(84,84,88,0.65);
+  --sep-op:   #38383A;
+  --label:    #FFFFFF;
+  --label2:   rgba(235,235,245,0.6);
+  --label3:   rgba(235,235,245,0.3);
+  --label4:   rgba(235,235,245,0.18);
+  --blue:     #0A84FF;
+  --orange:   #FF9F0A;
+  --red:      #FF453A;
+  --green:    #32D74B;
+  --fill1:    rgba(120,120,128,0.36);
+  --fill2:    rgba(120,120,128,0.32);
+  --fill3:    rgba(118,118,128,0.24);
+  --glass:    rgba(28,28,30,0.78);
+  --r:        13px;
+  --r-lg:     18px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overscroll-behavior:none;}
+html {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
 body{
   background:var(--bg);
-  color:var(--text);
-  font-family:'DM Sans',sans-serif;
-  font-size:15px;
+  color:var(--label);
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Helvetica,Arial,sans-serif;
+  font-size:17px;
   min-height:100vh;
   max-width:600px;
   margin:0 auto;
   overflow-x:hidden;
-  position:relative;
+  -webkit-font-smoothing:antialiased;
 }
 ::-webkit-scrollbar{width:0;}
 
@@ -48,173 +62,241 @@ body{
 #app-loader{
   position:fixed;inset:0;z-index:900;
   background:var(--bg);
-  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;
-  transition:opacity .5s;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:22px;
+  transition:opacity .45s;
 }
 #app-loader.fade{opacity:0;pointer-events:none;}
-#app-loader .logo-icon{font-size:48px;animation:pulse 1.5s ease-in-out infinite;}
-@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.12);}}
+#app-loader .logo-icon{
+  width:72px;height:72px;border-radius:18px;overflow:hidden;
+  animation:pulse 2s ease-in-out infinite;
+}
+#app-loader .logo-icon img{width:100%;height:100%;object-fit:cover;display:block;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.75;transform:scale(1.06);}}
 
 /* ── SPINNER ── */
 .spinner{
-  width:36px;height:36px;border-radius:50%;
-  border:3px solid var(--border);
-  border-top-color:var(--accent);
+  width:28px;height:28px;border-radius:50%;
+  border:2.5px solid var(--fill1);
+  border-top-color:var(--label2);
   animation:spin .7s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg);}}
-.spinner.sm{width:20px;height:20px;border-width:2px;}
+.spinner.sm{width:18px;height:18px;border-width:2px;}
 
 /* ── TOAST ── */
 #toast{
-  position:fixed;bottom:calc(var(--nav-h)+20px);left:50%;
-  transform:translateX(-50%) translateY(12px);
-  background:var(--surface2);border:1px solid var(--border);
-  border-radius:14px;padding:12px 22px;font-size:14px;
+  position:fixed;bottom:100px;left:50%;
+  transform:translateX(-50%) translateY(8px);
+  background:var(--bg2);border:1px solid var(--sep);
+  border-radius:14px;padding:11px 20px;font-size:14px;font-weight:500;
   white-space:nowrap;opacity:0;pointer-events:none;z-index:800;
-  transition:opacity .28s,transform .28s;
+  transition:opacity .25s,transform .25s;
+  box-shadow:0 4px 24px rgba(0,0,0,.5);
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-#toast.ok{border-color:var(--success);color:var(--success);}
-#toast.bad{border-color:var(--danger);color:var(--danger);}
+#toast.ok{color:var(--green);}
+#toast.bad{color:var(--red);}
 
 /* ── LOGIN ── */
 #login-screen{
+  width:100%;
+  min-height:100vh;min-height:100dvh;
+  display:flex;flex-direction:column;
   align-items:center;justify-content:center;
-  padding:36px 24px 50px;
-  background:
-    radial-gradient(ellipse 60% 40% at 20% 10%,rgba(232,160,48,.07) 0%,transparent 70%),
-    radial-gradient(ellipse 40% 50% at 85% 80%,rgba(80,80,200,.05) 0%,transparent 60%),
-    var(--bg);
+  overflow-y:auto;
+  background:var(--bg);
+}
+.login-inner{
+  width:100%;max-width:420px;
+  margin:0 auto;
+  display:flex;flex-direction:column;align-items:center;
+  padding:52px 24px 60px;
 }
 .login-mark{
-  width:80px;height:80px;border-radius:24px;
-  background:linear-gradient(135deg,#E8A030,#C46A10);
-  display:flex;align-items:center;justify-content:center;
-  font-size:38px;margin-bottom:28px;
-  box-shadow:0 8px 32px rgba(232,160,48,.35);
+  width:80px;height:80px;border-radius:20px;overflow:hidden;
+  margin-bottom:22px;
+  box-shadow:0 4px 24px rgba(0,0,0,.5);
 }
-.login-h{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;letter-spacing:-1px;margin-bottom:10px;}
-.login-sub{color:var(--text2);line-height:1.6;text-align:center;font-size:14px;margin-bottom:40px;}
-.field{width:100%;margin-bottom:16px;}
-.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.7px;}
+.login-mark img{width:100%;height:100%;object-fit:cover;display:block;}
+.login-h{
+  font-size:28px;font-weight:700;letter-spacing:.3px;
+  margin-bottom:6px;text-align:center;
+}
+.login-sub{color:var(--label2);line-height:1.5;text-align:center;font-size:15px;margin-bottom:36px;}
+
+/* ── GROUPED FORM (iOS Settings style) ── */
+.ios-section{width:100%;margin-bottom:10px;}
+.ios-section-label{
+  font-size:13px;color:var(--label2);
+  padding:0 16px 6px;letter-spacing:.2px;text-transform:uppercase;font-weight:500;font-size:12px;
+}
+.ios-group{
+  width:100%;background:var(--bg1);border-radius:var(--r-lg);overflow:hidden;
+}
+.ios-row{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;border-bottom:1px solid var(--sep);
+  position:relative;
+}
+.ios-row:last-child{border-bottom:none;}
+.ios-row input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--label);font-family:inherit;font-size:16px;
+  padding:0;min-width:0;
+}
+.ios-row input::placeholder{color:var(--label3);}
+.field{width:100%;margin-bottom:14px;}
+.field label{display:block;font-size:12px;color:var(--label2);margin-bottom:6px;letter-spacing:.2px;text-transform:uppercase;font-weight:500;padding-left:4px;}
 .field input{
-  width:100%;background:var(--surface);border:1.5px solid var(--border);
-  border-radius:14px;color:var(--text);font-family:'DM Sans',sans-serif;
-  font-size:14px;padding:15px 16px;outline:none;
-  transition:border-color .2s,box-shadow .2s;
+  width:100%;background:var(--bg1);border:none;
+  border-radius:var(--r);color:var(--label);font-family:inherit;
+  font-size:16px;padding:14px 16px;outline:none;
+  transition:box-shadow .2s;
 }
-.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+.field input:focus{box-shadow:0 0 0 3px rgba(10,132,255,.4);}
+
+/* ── BUTTONS ── */
 .btn{
   display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
-  background:linear-gradient(135deg,#E8A030,#C46A10);
-  color:#000;border:none;border-radius:14px;
-  font-family:'Syne',sans-serif;font-size:15px;font-weight:700;
-  padding:17px;cursor:pointer;transition:opacity .2s,transform .12s;
-  letter-spacing:.2px;
+  background:var(--blue);
+  color:#fff;border:none;border-radius:var(--r);
+  font-family:inherit;font-size:17px;font-weight:600;
+  padding:16px;cursor:pointer;transition:opacity .18s,transform .1s;
+  letter-spacing:-.1px;
 }
-.btn:active{transform:scale(.98);opacity:.9;}
-.btn.ghost{background:var(--surface2);color:var(--text);background-image:none;}
-.btn.red{background:var(--danger);color:#fff;background-image:none;}
-.btn:disabled{opacity:.45;pointer-events:none;}
-.pat-note{margin-top:24px;font-size:12px;color:var(--text2);text-align:center;line-height:1.7;}
-.pat-note a{color:var(--accent);text-decoration:none;}
+.btn:active{transform:scale(.98);opacity:.82;}
+.btn.ghost{background:var(--bg2);color:var(--label);}
+.btn.red{background:var(--red);}
+.btn.orange{background:var(--orange);color:#000;}
+.btn:disabled{opacity:.38;pointer-events:none;}
+.pat-note{margin-top:22px;font-size:13px;color:var(--label2);text-align:center;line-height:1.65;}
+.pat-note a{color:var(--blue);text-decoration:none;}
 
-/* ── HEADER ── */
+/* ── HEADER (iOS nav bar) ── */
 .hdr{
   position:sticky;top:0;z-index:100;
-  background:rgba(7,7,10,.88);backdrop-filter:blur(14px);
-  padding:10px 14px;display:flex;align-items:center;gap:10px;
-  border-bottom:1px solid var(--border);
-  min-height:56px;
+  background:var(--glass);backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  padding:10px 16px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--sep);
+  min-height:52px;
 }
 .hdr-back{
-  width:38px;height:38px;background:var(--surface);border:none;
-  border-radius:11px;color:var(--text);font-size:19px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  transition:background .15s;
+  background:none;border:none;padding:4px 2px;
+  color:var(--blue);font-size:17px;font-weight:400;
+  cursor:pointer;display:flex;align-items:center;gap:4px;
+  font-family:inherit;letter-spacing:-.1px;flex-shrink:0;
+  transition:opacity .15s;
 }
-.hdr-back:active{background:var(--surface3);}
-.hdr-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.repo-sel{
-  background:var(--surface);border:1.5px solid var(--border);
-  border-radius:11px;color:var(--text);font-family:'DM Sans',sans-serif;
-  font-size:13px;font-weight:500;padding:8px 28px 8px 12px;cursor:pointer;outline:none;
-  appearance:none;-webkit-appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6' fill='none' stroke='%2399' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 10px center;
-  transition:border-color .2s;flex-shrink:0;
+.hdr-back:active{opacity:.5;}
+.hdr-back-icon{font-size:20px;line-height:1;margin-right:2px;}
+.hdr-title{
+  font-size:17px;font-weight:600;flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  text-align:center;letter-spacing:-.2px;
 }
-.repo-sel:focus{border-color:var(--accent);}
+.hdr-wordmark{font-size:20px;font-weight:700;letter-spacing:-.4px;flex:1;}
+.repo-btn{
+  background:var(--fill3);border:none;
+  border-radius:9px;color:var(--label);font-family:inherit;
+  font-size:13px;font-weight:500;padding:7px 10px 7px 11px;cursor:pointer;
+  flex-shrink:0;transition:background .15s;
+  display:flex;align-items:center;gap:5px;
+}
+.repo-btn::after{
+  content:'';display:inline-block;width:8px;height:5px;flex-shrink:0;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6' fill='none' stroke='rgba(235,235,245,0.5)' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.repo-btn:active{background:var(--fill1);}
+.hdr-wordmark{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.5px;flex:1;}
+
 .hdr-ava{
-  width:34px;height:34px;border-radius:50%;overflow:hidden;
-  background:var(--surface2);flex-shrink:0;border:2px solid var(--border);
+  width:32px;height:32px;border-radius:50%;overflow:hidden;
+  background:var(--bg2);flex-shrink:0;
+  cursor:pointer;padding:0;border:none;transition:opacity .15s;
 }
-.hdr-ava img{width:100%;height:100%;object-fit:cover;}
+.hdr-ava:active{opacity:.6;}
+.hdr-ava img{width:100%;height:100%;object-fit:cover;display:block;}
+.hdr-icon-btn{
+  background:none;border:none;padding:4px;
+  color:var(--blue);font-size:20px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:opacity .15s;
+}
+.hdr-icon-btn:active{opacity:.5;}
 
 /* ── ALBUM GRID ── */
-.al-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px;padding-bottom:calc(var(--nav-h)+16px);}
-.al-card{
-  background:var(--surface);border-radius:var(--r);overflow:hidden;
-  cursor:pointer;border:1.5px solid var(--border);
-  transition:transform .18s,border-color .18s;
+.al-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:12px;padding:14px;padding-bottom:100px;
+  background:var(--bg);
 }
-.al-card:active{transform:scale(.965);border-color:var(--accent);}
-
-/* Album cover 2×2 */
+.al-card{
+  background:var(--bg1);border-radius:14px;overflow:hidden;
+  cursor:pointer;position:relative;
+  border:1px solid var(--sep);
+  transition:opacity .15s,transform .15s;
+}
+.al-card:active{opacity:.7;transform:scale(.97);}
 .al-cover{
   width:100%;aspect-ratio:1;display:grid;
   grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
-  overflow:hidden;background:var(--surface2);position:relative;
+  overflow:hidden;background:var(--bg2);
 }
-.al-cell{overflow:hidden;background:var(--surface2);}
+.al-cell{overflow:hidden;background:var(--bg2);}
 .al-cell img{width:100%;height:100%;object-fit:cover;display:block;}
 .al-empty-cover{
   display:flex;align-items:center;justify-content:center;
-  aspect-ratio:1;background:var(--surface2);
-  color:var(--text3);font-size:36px;
+  aspect-ratio:1;background:var(--bg2);
+  color:var(--label3);font-size:42px;
 }
-.al-info{padding:12px 12px 14px;display:flex;align-items:center;justify-content:space-between;}
-.al-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;}
-.al-count{font-size:12px;color:var(--text2);margin-top:2px;}
+.al-info{padding:10px 12px 14px;display:flex;align-items:center;justify-content:space-between;}
+.al-name{font-size:14px;font-weight:600;letter-spacing:-.1px;}
+.al-count{font-size:12px;color:var(--label2);margin-top:2px;}
 .al-menu{
-  width:30px;height:30px;background:none;border:none;
-  color:var(--text3);font-size:17px;cursor:pointer;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;transition:background .15s;
+  width:28px;height:28px;background:var(--fill3);border:none;
+  color:var(--label2);font-size:15px;cursor:pointer;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0;
 }
-.al-menu:active{background:var(--surface3);}
+.al-menu:active{background:var(--fill1);}
 
 /* ── IMAGES GRID ── */
-.im-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px;padding-bottom:calc(var(--nav-h)+16px);}
+.im-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1.5px;background:var(--bg);
+  padding-bottom:100px;
+}
 .im-th{
   aspect-ratio:1;overflow:hidden;cursor:pointer;
-  background:var(--surface2);position:relative;transition:opacity .15s;
+  background:var(--bg2);position:relative;
 }
 .im-th img{width:100%;height:100%;object-fit:cover;display:block;}
 .im-th.sel::after{
-  content:'✓';position:absolute;inset:0;
-  background:rgba(232,160,48,.55);
+  content:'';position:absolute;inset:0;
+  background:rgba(10,132,255,.35);
+  border:3px solid var(--blue);
+}
+.im-th.sel::before{
+  content:'✓';position:absolute;bottom:6px;right:6px;z-index:2;
+  width:22px;height:22px;border-radius:50%;
+  background:var(--blue);color:#fff;font-size:13px;font-weight:700;
   display:flex;align-items:center;justify-content:center;
-  font-size:26px;font-weight:700;color:#fff;
 }
 .shimmer{
   width:100%;height:100%;
-  background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);
+  background:linear-gradient(90deg,var(--bg2) 25%,var(--bg3) 50%,var(--bg2) 75%);
   background-size:200% 100%;animation:shim 1.4s infinite;
 }
 @keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ── VIEWER ── */
-#viewer{
-  position:fixed;inset:0;z-index:500;
-  background:#000;display:none;flex-direction:column;
-  touch-action:pan-y;
-}
+#viewer{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;}
 #viewer.active{display:flex;}
 .vhdr{
-  position:absolute;top:0;left:0;right:0;padding:env(safe-area-inset-top,12px) 14px 14px;
-  background:linear-gradient(to bottom,rgba(0,0,0,.8),transparent);
-  display:flex;align-items:flex-end;gap:12px;z-index:10;padding-top:max(env(safe-area-inset-top,0px),14px);
+  position:absolute;top:0;left:0;right:0;
+  padding:max(env(safe-area-inset-top,14px),14px) 16px 16px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.72),transparent);
+  display:flex;align-items:flex-end;gap:12px;z-index:10;
 }
 .vbody{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
 #vimg{max-width:100%;max-height:100%;object-fit:contain;display:none;}
@@ -222,114 +304,125 @@ body{
 .vload p{font-size:13px;color:rgba(255,255,255,.4);}
 .vfoot{
   position:absolute;bottom:0;left:0;right:0;
-  padding:14px 14px calc(env(safe-area-inset-bottom,0px)+14px);
-  background:linear-gradient(to top,rgba(0,0,0,.8),transparent);
+  padding:16px 16px calc(env(safe-area-inset-bottom,0px)+16px);
+  background:linear-gradient(to top,rgba(0,0,0,.72),transparent);
   display:flex;align-items:center;justify-content:space-between;z-index:10;
 }
-.vnav{font-size:12px;color:rgba(255,255,255,.35);text-align:center;}
+.vnav{font-size:13px;color:rgba(255,255,255,.4);text-align:center;}
 .ibtn{
-  width:46px;height:46px;background:rgba(255,255,255,.13);
-  backdrop-filter:blur(8px);border:none;border-radius:13px;
-  color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:background .15s;
-}
-.ibtn:active{background:rgba(255,255,255,.28);}
-.ibtn.acc{background:var(--accent);color:#000;}
-
-/* ── FAB ── */
-.fab{
-  position:fixed;right:18px;bottom:calc(var(--nav-h)+14px);
-  width:58px;height:58px;border-radius:50%;
-  background:linear-gradient(135deg,#E8A030,#C46A10);
-  border:none;font-size:26px;color:#000;cursor:pointer;z-index:90;
-  box-shadow:0 6px 24px rgba(232,160,48,.45);
+  min-width:44px;height:44px;background:rgba(255,255,255,.12);
+  backdrop-filter:blur(12px);border:none;border-radius:22px;
+  color:#fff;font-size:18px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  transition:transform .18s;
+  padding:0 14px;transition:background .15s;
 }
-.fab:active{transform:scale(.91);}
+.ibtn:active{background:rgba(255,255,255,.25);}
+.ibtn.acc{background:var(--blue);}
 
-/* ── BOTTOM NAV ── */
-.bnav{
-  display:none;/* hidden by default, shown in specific screens */
+/* ── BOTTOM ACTION BAR ── */
+.bbar{
+  position:fixed;bottom:0;left:0;right:0;max-width:600px;margin:0 auto;
+  z-index:90;padding:10px 16px max(env(safe-area-inset-bottom,0px),10px);
+  background:linear-gradient(to top,var(--bg) 60%,transparent);
+  pointer-events:none;
 }
+.bbar-btn{
+  pointer-events:all;width:100%;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  background:var(--blue);color:#fff;border:none;border-radius:var(--r-lg);
+  font-family:inherit;font-size:17px;font-weight:600;
+  padding:17px 24px;cursor:pointer;
+  box-shadow:0 4px 20px rgba(10,132,255,.35);
+  transition:transform .12s,opacity .15s;
+}
+.bbar-btn:active{transform:scale(.97);opacity:.84;}
+.bbar-ico{font-size:19px;line-height:1;}
 
 /* ── SELECT BAR ── */
 #sel-bar{
   position:fixed;top:0;left:0;right:0;max-width:600px;margin:0 auto;z-index:200;
-  background:linear-gradient(135deg,#E8A030,#C46A10);
-  padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
-  transform:translateY(-100%);transition:transform .28s;
+  background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--sep);
+  padding:10px 16px;display:flex;align-items:center;justify-content:space-between;
+  transform:translateY(-100%);transition:transform .26s cubic-bezier(.4,0,.2,1);
 }
 #sel-bar.on{transform:translateY(0);}
-.sel-title{font-family:'Syne',sans-serif;font-weight:700;color:#000;font-size:15px;}
-.sel-acts{display:flex;gap:8px;}
+.sel-title{font-size:15px;font-weight:600;color:var(--label);}
+.sel-acts{display:flex;gap:6px;}
 .sel-btn{
-  background:rgba(0,0,0,.15);border:none;border-radius:9px;
-  color:#000;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;
-  font-family:'DM Sans',sans-serif;
+  background:var(--fill3);border:none;border-radius:9px;
+  color:var(--blue);padding:7px 13px;font-size:14px;font-weight:500;
+  cursor:pointer;font-family:inherit;transition:opacity .15s;
 }
-.sel-btn.del{background:rgba(200,0,0,.2);color:#8B0000;}
+.sel-btn:active{opacity:.6;}
+.sel-btn.del{color:var(--red);}
 
 /* ── MODALS ── */
 .mover{
-  position:fixed;inset:0;background:rgba(0,0,0,.75);
-  backdrop-filter:blur(5px);z-index:600;
-  display:none;align-items:flex-end;justify-content:center;
+  position:fixed;inset:0;background:rgba(0,0,0,.6);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  z-index:600;display:none;align-items:flex-end;justify-content:center;
 }
 .mover.on{display:flex;}
 .modal{
-  background:var(--surface);border-radius:26px 26px 0 0;
-  padding:20px 20px calc(env(safe-area-inset-bottom,0px)+32px);
-  width:100%;max-width:600px;animation:mup .28s ease;
+  background:var(--bg1);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  padding:8px 0 calc(env(safe-area-inset-bottom,0px) + 16px);
+  width:100%;max-width:600px;
+  will-change:transform;
 }
+.mover.on .modal{animation:mup .3s cubic-bezier(.32,0,.67,0) forwards;}
+.mover.closing .modal{animation:mdown .28s cubic-bezier(.32,0,.67,0) forwards;}
 @keyframes mup{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.mhandle{width:38px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;}
-.mtitle{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:18px;}
-.mlist{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;}
+@keyframes mdown{from{transform:translateY(0)}to{transform:translateY(110%)}}
+.mhandle{width:36px;height:5px;background:var(--fill1);border-radius:3px;margin:8px auto 14px;}
+.mtitle{font-size:17px;font-weight:600;padding:4px 20px 16px;letter-spacing:-.2px;}
+.mlist{display:flex;flex-direction:column;max-height:52vh;overflow-y:auto;}
 .mitem{
-  display:flex;align-items:center;gap:13px;padding:14px;
-  background:var(--surface2);border-radius:13px;cursor:pointer;
-  transition:background .15s;font-size:15px;
+  display:flex;align-items:center;gap:14px;padding:14px 20px;
+  cursor:pointer;transition:background .12s;font-size:16px;
+  border-bottom:1px solid var(--sep);
 }
-.mitem:active{background:var(--surface3);}
+.mitem:last-child{border-bottom:none;}
+.mitem:active{background:var(--fill3);}
+.mitem-ico{font-size:22px;width:28px;text-align:center;flex-shrink:0;}
+.mitem-label{font-size:16px;font-weight:400;}
+.mitem-sub{font-size:13px;color:var(--label2);margin-top:2px;}
+.modal-actions{padding:14px 16px 0;}
 
-/* ── UPLOAD OVERLAY ── */
+
 #ul-over{
-  position:fixed;inset:0;background:rgba(0,0,0,.72);
+  position:fixed;inset:0;background:rgba(0,0,0,.65);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
   z-index:700;display:none;align-items:center;justify-content:center;
 }
 #ul-over.on{display:flex;}
 .ul-card{
-  background:var(--surface2);border:1.5px solid var(--border);
-  border-radius:22px;padding:28px 24px;width:300px;text-align:center;
+  background:var(--bg1);
+  border-radius:var(--r-lg);padding:28px 26px 26px;width:290px;text-align:center;
+  box-shadow:0 16px 48px rgba(0,0,0,.6);
 }
-.ul-card h3{font-family:'Syne',sans-serif;font-size:18px;margin-bottom:8px;}
-.ul-card p{font-size:13px;color:var(--text2);margin-bottom:18px;min-height:20px;}
-.pbar{height:4px;background:var(--border);border-radius:3px;overflow:hidden;}
-.pfill{height:100%;background:linear-gradient(90deg,#E8A030,#C46A10);border-radius:3px;transition:width .3s;}
+.ul-card h3{font-size:17px;font-weight:600;margin-bottom:6px;}
+.ul-card p{font-size:14px;color:var(--label2);margin-bottom:18px;min-height:20px;}
+.pbar{height:3px;background:var(--fill1);border-radius:2px;overflow:hidden;}
+.pfill{height:100%;background:var(--blue);border-radius:2px;transition:width .3s;}
 
 /* ── EMPTY STATE ── */
 .empty{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:64px 24px;gap:14px;color:var(--text2);text-align:center;
+  padding:64px 24px;gap:10px;color:var(--label2);text-align:center;
   grid-column:1/-1;
 }
-.empty-ico{font-size:60px;opacity:.35;}
-.empty h3{font-family:'Syne',sans-serif;font-size:18px;color:var(--text);}
-.empty p{font-size:14px;line-height:1.65;}
-
-/* ── SECTION LABEL ── */
-.sec-label{
-  padding:16px 16px 8px;
-  font-size:11px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);
-}
+.empty-ico{font-size:52px;opacity:.3;margin-bottom:4px;}
+.empty h3{font-size:18px;font-weight:600;color:var(--label);letter-spacing:-.2px;}
+.empty p{font-size:15px;line-height:1.5;}
 </style>
 </head>
 <body>
 
 <!-- Loader -->
 <div id="app-loader">
-  <div class="logo-icon">☁️</div>
+  <div class="logo-icon"><img src="icon.ico" alt="GitCloud"></div>
   <div class="spinner"></div>
 </div>
 
@@ -338,37 +431,39 @@ body{
 
 <!-- ════════════════════ LOGIN ════════════════════ -->
 <div class="screen" id="s-login">
-  <div class="login-mark">☁️</div>
-  <h1 class="login-h">GitCloud</h1>
-  <p class="login-sub">Private photo storage powered<br>by your GitHub repositories.</p>
+  <div class="login-inner">
+    <div class="login-mark"><img src="icon.ico" alt="GitCloud"></div>
+    <h1 class="login-h">GitCloud</h1>
+    <p class="login-sub">Private photo storage powered<br>by your GitHub repositories.</p>
 
-  <div class="field">
-    <label>GitHub Personal Access Token</label>
-    <input type="password" id="pat-inp" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off" autocorrect="off">
+    <div class="field">
+      <label>GitHub Personal Access Token</label>
+      <input type="password" id="pat-inp" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off" autocorrect="off">
+    </div>
+
+    <button class="btn" id="login-btn" onclick="doLogin()">Sign in with GitHub</button>
+
+    <p class="pat-note">
+      Create a token at <a href="https://github.com/settings/tokens/new" target="_blank">GitHub → Settings → Developer settings</a><br>
+      → Personal access tokens → Generate new token (classic).<br><br>
+      Required scope: <strong>repo</strong> (full control of private repos)
+    </p>
   </div>
-
-  <button class="btn" id="login-btn" onclick="doLogin()">
-    <span style="font-size:18px">🔑</span> Sign in with GitHub
-  </button>
-
-  <p class="pat-note">
-    Create a token at <a href="https://github.com/settings/tokens/new" target="_blank">GitHub → Settings → Developer settings</a><br>
-    → Personal access tokens → Generate new token (classic).<br><br>
-    Required scope: <strong>repo</strong> (full control of private repos)
-  </p>
 </div>
 
 <!-- ════════════════════ ALBUMS ════════════════════ -->
 <div class="screen" id="s-albums">
   <div class="hdr">
-    <div style="flex:1">
-      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.5px">GitCloud</div>
-    </div>
-    <select class="repo-sel" id="rsel-albums" onchange="switchRepo(+this.value)"></select>
-    <div class="hdr-ava"><img id="ava" src="" alt=""></div>
+    <div class="hdr-wordmark">GitCloud</div>
+    <button class="repo-btn" id="rsel-albums" onclick="openRepoMenu()"><span>Slike 1</span></button>
+    <button class="hdr-ava" onclick="openProfile()" aria-label="Profile"><img id="ava" src="" alt=""></button>
   </div>
   <div class="al-grid" id="al-grid"></div>
-  <button class="fab" onclick="openCreateAlbum()" title="New Album">＋</button>
+  <div class="bbar">
+    <button class="bbar-btn" onclick="openCreateAlbum()">
+      <span class="bbar-ico">＋</span> New Album
+    </button>
+  </div>
 </div>
 
 <!-- ════════════════════ IMAGES ════════════════════ -->
@@ -382,37 +477,41 @@ body{
     </div>
   </div>
   <div class="hdr" id="im-hdr">
-    <button class="hdr-back" onclick="goAlbums()">←</button>
+    <button class="hdr-back" onclick="goAlbums()"><span class="hdr-back-icon">‹</span> Albums</button>
     <div class="hdr-title" id="im-title">Album</div>
-    <button class="hdr-back" onclick="loadImages(true)" title="Refresh" style="font-size:17px">↻</button>
-    <select class="repo-sel" id="rsel-images" onchange="switchRepo(+this.value)"></select>
+    <button class="hdr-icon-btn" onclick="loadImages(true)" title="Refresh">↻</button>
+    <button class="repo-btn" id="rsel-images" onclick="openRepoMenu()"><span>Slike 1</span></button>
   </div>
   <div class="im-grid" id="im-grid"></div>
-  <button class="fab" onclick="triggerUp()" title="Upload">＋</button>
+  <div class="bbar">
+    <button class="bbar-btn" onclick="triggerUp()">
+      <span class="bbar-ico">＋</span> Add Photos
+    </button>
+  </div>
   <input type="file" id="file-inp" accept="image/*" multiple style="display:none" onchange="handleUp(event)">
 </div>
 
 <!-- ════════════════════ VIEWER ════════════════════ -->
 <div id="viewer">
   <div class="vhdr">
-    <button class="ibtn" onclick="closeViewer()">✕</button>
-    <div style="flex:1;padding:0 4px">
-      <div style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="v-name">photo.jpg</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px" id="v-info"></div>
+    <button class="ibtn" onclick="closeViewer()" style="font-size:15px;font-weight:500;padding:0 16px;">Done</button>
+    <div style="flex:1;padding:0 6px;text-align:center;">
+      <div style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="v-name">photo.jpg</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:1px" id="v-info"></div>
     </div>
-    <button class="ibtn" onclick="openViewerMenu()" style="font-size:16px">⋮</button>
+    <button class="ibtn" onclick="openViewerMenu()" style="font-size:20px;padding:0 14px;">⋯</button>
   </div>
   <div class="vbody" id="vbody">
-    <div class="vload" id="vload"><div class="spinner"></div><p>Loading full resolution…</p></div>
+    <div class="vload" id="vload"><div class="spinner"></div><p>Loading…</p></div>
     <img id="vimg" src="" alt="">
   </div>
   <div class="vfoot">
-    <button class="ibtn" onclick="vPrev()" id="v-prev-btn">←</button>
-    <div style="text-align:center">
+    <button class="ibtn" onclick="vPrev()" id="v-prev-btn" style="font-size:22px;">‹</button>
+    <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;">
       <div class="vnav" id="v-pos"></div>
-      <button class="ibtn acc" onclick="dlCurrent()" style="margin-top:6px">⬇</button>
+      <button class="ibtn acc" onclick="dlCurrent()" style="font-size:15px;font-weight:600;padding:0 20px;">Download</button>
     </div>
-    <button class="ibtn" onclick="vNext()" id="v-next-btn">→</button>
+    <button class="ibtn" onclick="vNext()" id="v-next-btn" style="font-size:22px;">›</button>
   </div>
 </div>
 
@@ -423,13 +522,15 @@ body{
   <div class="modal">
     <div class="mhandle"></div>
     <div class="mtitle">New Album</div>
-    <div class="field">
-      <label>Album Name</label>
-      <input type="text" id="al-name-inp" placeholder="Holidays 2025" maxlength="50">
+    <div style="padding:0 16px;">
+      <div class="field">
+        <label>Album Name</label>
+        <input type="text" id="al-name-inp" placeholder="e.g. Summer 2025" maxlength="50">
+      </div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:18px">
+    <div class="modal-actions" style="display:flex;gap:10px;padding:12px 16px 0;">
       <button class="btn ghost" onclick="closeM('m-create')">Cancel</button>
-      <button class="btn" onclick="doCreateAlbum()">Create Album</button>
+      <button class="btn" onclick="doCreateAlbum()">Create</button>
     </div>
   </div>
 </div>
@@ -438,17 +539,20 @@ body{
 <div class="mover" id="m-al-opts">
   <div class="modal">
     <div class="mhandle"></div>
-    <div class="mtitle" id="m-al-opts-title">Album Options</div>
+    <div class="mtitle" id="m-al-opts-title">Album</div>
     <div class="mlist">
-      <div class="mitem" onclick="doDeleteAlbum()">
-        <span style="font-size:20px">🗑️</span>
-        <div>
-          <div>Delete Album</div>
-          <div style="font-size:12px;color:var(--text2)">Removes album and all photos inside</div>
-        </div>
+      <div class="mitem" onclick="doDownloadAlbum()">
+        <span class="mitem-ico">⬇️</span>
+        <div><div class="mitem-label">Download Album</div><div class="mitem-sub">Save all photos as a ZIP file</div></div>
+      </div>
+      <div class="mitem" onclick="doDeleteAlbum()" style="color:var(--red)">
+        <span class="mitem-ico">🗑️</span>
+        <div><div class="mitem-label">Delete Album</div><div class="mitem-sub">Removes album and all photos</div></div>
       </div>
     </div>
-    <button class="btn ghost" style="margin-top:14px" onclick="closeM('m-al-opts')">Cancel</button>
+    <div class="modal-actions" style="padding:14px 16px 0;">
+      <button class="btn ghost" onclick="closeM('m-al-opts')">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -458,7 +562,9 @@ body{
     <div class="mhandle"></div>
     <div class="mtitle">Move to Album</div>
     <div class="mlist" id="m-transfer-list"></div>
-    <button class="btn ghost" style="margin-top:14px" onclick="closeM('m-transfer')">Cancel</button>
+    <div class="modal-actions" style="padding:14px 16px 0;">
+      <button class="btn ghost" onclick="closeM('m-transfer')">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -468,16 +574,18 @@ body{
     <div class="mhandle"></div>
     <div class="mlist">
       <div class="mitem" onclick="dlCurrent();closeM('m-v-menu')">
-        <span style="font-size:20px">⬇️</span><span>Download photo</span>
+        <span class="mitem-ico">⬇️</span><span class="mitem-label">Download Photo</span>
       </div>
       <div class="mitem" onclick="vMoveToAlbum();closeM('m-v-menu')">
-        <span style="font-size:20px">📁</span><span>Move to album…</span>
+        <span class="mitem-ico">📁</span><span class="mitem-label">Move to Album…</span>
       </div>
-      <div class="mitem" onclick="vDeleteCurrent();closeM('m-v-menu')" style="color:var(--danger)">
-        <span style="font-size:20px">🗑️</span><span>Delete photo</span>
+      <div class="mitem" onclick="vDeleteCurrent();closeM('m-v-menu')" style="color:var(--red)">
+        <span class="mitem-ico">🗑️</span><span class="mitem-label">Delete Photo</span>
       </div>
     </div>
-    <button class="btn ghost" style="margin-top:14px" onclick="closeM('m-v-menu')">Cancel</button>
+    <div class="modal-actions" style="padding:14px 16px 0;">
+      <button class="btn ghost" onclick="closeM('m-v-menu')">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -487,14 +595,73 @@ body{
     <div class="mhandle"></div>
     <div class="mtitle">Move to Album</div>
     <div class="mlist" id="m-v-move-list"></div>
-    <button class="btn ghost" style="margin-top:14px" onclick="closeM('m-v-move')">Cancel</button>
+    <div class="modal-actions" style="padding:14px 16px 0;">
+      <button class="btn ghost" onclick="closeM('m-v-move')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile -->
+<div class="mover" id="m-profile">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div style="display:flex;align-items:center;gap:14px;padding:0 20px 18px;">
+      <img id="prof-ava" src="" style="width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--bg2);" alt="">
+      <div>
+        <div style="font-size:18px;font-weight:700;letter-spacing:-.3px" id="prof-name">—</div>
+        <div style="font-size:13px;color:var(--label2);margin-top:3px">GitHub account</div>
+      </div>
+    </div>
+    <div class="mlist">
+      <div class="mitem" onclick="openChangeToken()">
+        <span class="mitem-ico">🔑</span>
+        <div><div class="mitem-label">Change Token</div><div class="mitem-sub">Update your GitHub access token</div></div>
+      </div>
+      <div class="mitem" onclick="doLogout()" style="color:var(--red)">
+        <span class="mitem-ico">🚪</span>
+        <div><div class="mitem-label">Sign Out</div><div class="mitem-sub">Clear credentials and return to login</div></div>
+      </div>
+    </div>
+    <div class="modal-actions" style="padding:14px 16px 0;">
+      <button class="btn ghost" onclick="closeM('m-profile')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Token -->
+<div class="mover" id="m-change-tok">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">Change Token</div>
+    <div style="padding:0 16px;">
+      <div class="field">
+        <label>New Personal Access Token</label>
+        <input type="password" id="new-tok-inp" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off" autocorrect="off">
+      </div>
+    </div>
+    <div class="modal-actions" style="display:flex;gap:10px;padding:12px 16px 0;">
+      <button class="btn ghost" onclick="closeM('m-change-tok')">Cancel</button>
+      <button class="btn" onclick="doChangeToken()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Repo Picker -->
+<div class="mover" id="m-repo">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">Select Storage</div>
+    <div class="mlist" id="m-repo-list"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeM('m-repo')">Cancel</button>
+    </div>
   </div>
 </div>
 
 <!-- Upload overlay -->
 <div id="ul-over">
   <div class="ul-card">
-    <h3 id="ul-h">Uploading</h3>
+    <h3 id="ul-h">Working…</h3>
     <p id="ul-status">Preparing…</p>
     <div class="pbar"><div class="pfill" id="ul-fill" style="width:0%"></div></div>
   </div>
@@ -775,14 +942,193 @@ async function getFull(idx, item) {
    UI HELPERS
 ═══════════════════════════════════════════════════════ */
 const $ = id => document.getElementById(id);
+function openM(id) {
+  const ov = $(id);
+  ov.classList.remove('closing');
+  ov.classList.add('on');
+}
+function closeM(id) {
+  const ov = $(id);
+  ov.classList.add('closing');
+  setTimeout(() => { ov.classList.remove('on','closing'); }, 300);
+}
 
-function show(id) {
+// Swipe-down to close any modal
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.mover').forEach(ov => {
+    const modal = ov.querySelector('.modal');
+    if (!modal) return;
+    let sy = 0, dragging = false;
+    const handle = () => modal.querySelector('.mhandle') || modal;
+    modal.addEventListener('touchstart', e => {
+      // Only start drag from top 60px of modal (handle area)
+      const touch = e.touches[0];
+      const rect = modal.getBoundingClientRect();
+      if (touch.clientY - rect.top > 60) return;
+      sy = touch.clientY; dragging = true;
+      modal.style.transition = 'none';
+    }, { passive: true });
+    modal.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      const dy = Math.max(0, e.touches[0].clientY - sy);
+      modal.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    modal.addEventListener('touchend', e => {
+      if (!dragging) return;
+      dragging = false;
+      modal.style.transition = '';
+      const dy = e.changedTouches[0].clientY - sy;
+      if (dy > 80) {
+        modal.style.transform = '';
+        closeM(ov.id);
+      } else {
+        modal.style.transform = '';
+      }
+    });
+  });
+});
+
+
+/* ── HASH / HISTORY ROUTING ── */
+function albumToHash(name) {
+  return '#' + encodeURIComponent(name.toLowerCase());
+}
+function hashToAlbum(hash) {
+  try { return decodeURIComponent(hash.replace(/^#/, '')); } catch { return ''; }
+}
+function findAlbum(slug) {
+  return S.albums.find(a => a.name.toLowerCase() === slug.toLowerCase());
+}
+
+// Flag to suppress hashchange when we change the URL programmatically
+let _skipHash = false;
+function navPush(state, hash) {
+  _skipHash = true;
+  history.pushState(state, '', hash);
+  setTimeout(() => { _skipHash = false; }, 0);
+}
+function navReplace(state, hash) {
+  _skipHash = true;
+  history.replaceState(state, '', hash);
+  setTimeout(() => { _skipHash = false; }, 0);
+}
+
+// Raw screen switch — no history side effects
+function showRaw(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
 }
 
-function openM(id) { $(id).classList.add('on'); }
-function closeM(id) { $(id).classList.remove('on'); }
+// Navigate to albums
+async function goAlbums() {
+  exitSel();
+  $('viewer').classList.remove('active');
+  navPush({ screen: 'albums' }, '#albums');
+  showRaw('s-albums');
+  loadAlbums();
+}
+
+// Navigate into an album
+async function openAlbum(name) {
+  S.album = name;
+  $('im-title').textContent = name;
+  navPush({ screen: 'images', album: name }, albumToHash(name));
+  showRaw('s-images');
+  await loadImages();
+}
+
+// hashchange: ONLY fires when user manually types/edits the URL hash
+window.addEventListener('hashchange', async () => {
+  if (_skipHash) return;
+  if (!S.token || !S.user) return;
+
+  $('viewer').classList.remove('active');
+  document.querySelectorAll('.mover').forEach(m => m.classList.remove('on'));
+
+  const hash = location.hash;
+
+  if (!hash || hash === '#' || hash === '#albums') {
+    navReplace({ screen: 'albums' }, '#albums');
+    exitSel();
+    showRaw('s-albums');
+    await loadAlbums();
+    return;
+  }
+
+  const slug = hashToAlbum(hash);
+  if (!slug) return;
+
+  // Load albums if not yet loaded (e.g. direct URL navigation)
+  if (S.albums.length === 0) await loadAlbums();
+
+  const match = findAlbum(slug);
+  if (match) {
+    navReplace({ screen: 'images', album: match.name }, albumToHash(match.name));
+    S.album = match.name;
+    $('im-title').textContent = match.name;
+    showRaw('s-images');
+    await loadImages();
+  } else {
+    toast('Album "' + slug + '" not found', 'bad');
+    navReplace({ screen: 'albums' }, '#albums');
+    showRaw('s-albums');
+    await loadAlbums();
+  }
+});
+
+// popstate: browser back/forward buttons
+window.addEventListener('popstate', async e => {
+  const openModal = document.querySelector('.mover.on');
+  if (openModal) { closeM(openModal.id); return; }
+
+  if (!S.token || !S.user) { showRaw('s-login'); return; }
+
+  if ($('viewer').classList.contains('active')) {
+    $('viewer').classList.remove('active');
+    return;
+  }
+
+  const st = e.state;
+  if (!st || st.screen === 'albums') {
+    exitSel();
+    showRaw('s-albums');
+    loadAlbums();
+    return;
+  }
+  if (st.screen === 'images' && st.album) {
+    S.album = st.album;
+    $('im-title').textContent = st.album;
+    showRaw('s-images');
+    await loadImages();
+    return;
+  }
+  if (st.screen === 'viewer' && st.album) {
+    $('viewer').classList.remove('active');
+    S.album = st.album;
+    $('im-title').textContent = st.album;
+    showRaw('s-images');
+    await loadImages();
+  }
+});
+
+// On boot: deep-link into album if hash is present in URL
+async function handleInitialHash() {
+  const hash = location.hash;
+  if (!hash || hash === '#' || hash === '#albums') return;
+  const slug = hashToAlbum(hash);
+  if (!slug) return;
+  // S.albums already populated by loadAlbums() in boot()
+  const match = findAlbum(slug);
+  if (match) {
+    // Keep #albums as the back-destination, push album on top
+    navReplace({ screen: 'albums' }, '#albums');
+    S.album = match.name;
+    $('im-title').textContent = match.name;
+    navPush({ screen: 'images', album: match.name }, albumToHash(match.name));
+    showRaw('s-images');
+    await loadImages();
+  }
+}
 
 let toastT;
 function toast(msg, cls = '') {
@@ -806,11 +1152,19 @@ function fmtSz(b) {
 }
 
 function fillRepoSels() {
-  const html = Array.from({length:10}, (_,i) =>
-    `<option value="${i}"${i===S.repo?' selected':''}>${REPO_LABEL(i)}</option>`
-  ).join('');
-  $('rsel-albums').innerHTML = html;
-  $('rsel-images').innerHTML = html;
+  const label = REPO_LABEL(S.repo);
+  const a = $('rsel-albums'); if (a) a.querySelector('span').textContent = label;
+  const b = $('rsel-images'); if (b) b.querySelector('span').textContent = label;
+}
+
+function openRepoMenu() {
+  $('m-repo-list').innerHTML = Array.from({length:10}, (_,i) => `
+    <div class="mitem" onclick="switchRepo(${i});closeM('m-repo')">
+      <span class="mitem-ico" style="font-size:16px;color:var(--blue)">${i === S.repo ? '✓' : ''}</span>
+      <span class="mitem-label">${REPO_LABEL(i)}</span>
+    </div>
+  `).join('');
+  openM('m-repo');
 }
 
 /* Upload overlay */
@@ -834,34 +1188,103 @@ async function doLogin() {
   if (!tok) { toast('Paste your GitHub token', 'bad'); return; }
   const btn = $('login-btn');
   btn.disabled = true;
-  btn.textContent = 'Connecting…';
+  btn.innerHTML = '<div class="spinner sm"></div> Connecting…';
+
   S.token = tok;
+  let user;
+  // Step 1: Validate token — only this can throw "bad credentials"
   try {
-    const u = await getUser();
-    S.user = u.login;
-    S.ava  = u.avatar_url;
-    localStorage.setItem('gc_tok', tok);
-    localStorage.setItem('gc_usr', u.login);
-    localStorage.setItem('gc_ava', u.avatar_url);
-    await boot();
+    user = await getUser();
   } catch(e) {
     toast('Invalid token: ' + e.message, 'bad');
     S.token = '';
-  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span style="font-size:18px">🔑</span> Sign in with GitHub';
+    return;
+  }
+
+  // Token is valid — save credentials
+  S.user = user.login;
+  S.ava  = user.avatar_url;
+  localStorage.setItem('gc_tok', tok);
+  localStorage.setItem('gc_usr', user.login);
+  localStorage.setItem('gc_ava', user.avatar_url);
+
+  // Step 2: Boot (errors here are not credential problems)
+  try {
+    await boot();
+  } catch(e) {
+    toast('Error loading repos: ' + e.message, 'bad');
     btn.disabled = false;
     btn.innerHTML = '<span style="font-size:18px">🔑</span> Sign in with GitHub';
   }
 }
 
 /* ═══════════════════════════════════════════════════════
-   BOOT
+   PROFILE / LOGOUT / CHANGE TOKEN
 ═══════════════════════════════════════════════════════ */
+function openProfile() {
+  $('prof-ava').src = S.ava;
+  $('prof-name').textContent = S.user;
+  openM('m-profile');
+}
+
+function doLogout() {
+  closeM('m-profile');
+  if (!confirm('Log out? Your photos stay safe in GitHub.')) return;
+  localStorage.removeItem('gc_tok');
+  localStorage.removeItem('gc_usr');
+  localStorage.removeItem('gc_ava');
+  S.token = ''; S.user = ''; S.ava = '';
+  $('pat-inp').value = '';
+  history.replaceState(null, '', location.pathname);
+  showRaw('s-login');
+}
+
+function openChangeToken() {
+  closeM('m-profile');
+  $('new-tok-inp').value = '';
+  openM('m-change-tok');
+  setTimeout(() => $('new-tok-inp').focus(), 300);
+}
+
+async function doChangeToken() {
+  const tok = $('new-tok-inp').value.trim();
+  if (!tok) { toast('Enter a token', 'bad'); return; }
+  closeM('m-change-tok');
+  const prevTok = S.token;
+  S.token = tok;
+  try {
+    const u = await getUser();
+    S.user = u.login; S.ava = u.avatar_url;
+    localStorage.setItem('gc_tok', tok);
+    localStorage.setItem('gc_usr', u.login);
+    localStorage.setItem('gc_ava', u.avatar_url);
+    $('ava').src = u.avatar_url;
+    toast('Token updated!', 'ok');
+  } catch(e) {
+    S.token = prevTok;
+    toast('Invalid token: ' + e.message, 'bad');
+  }
+}
+
+
 async function boot() {
   fillRepoSels();
   $('ava').src = S.ava;
   try { await ensureRepo(S.repo); } catch {}
   await loadAlbums();
-  show('s-albums');
+
+  // Capture the user's intended hash BEFORE we overwrite it
+  const initialHash = location.hash;
+
+  // Set base history entry for albums view
+  navReplace({ screen: 'albums' }, '#albums');
+  showRaw('s-albums');
+
+  // If URL had a deep-link hash, navigate into that album
+  await handleInitialHash(initialHash);
+
   hideLoader();
 }
 
@@ -877,7 +1300,7 @@ function renderAlbumGrid() {
   }
   grid.innerHTML = dirs.map(d => `
     <div class="al-card" id="alcard-${d.name}" onclick="openAlbum('${escQ(d.name)}')">
-      <div id="alcover-${d.name}" class="al-cover" style="background:var(--surface2)">
+      <div id="alcover-${d.name}" class="al-cover" style="background:var(--bg2)">
         <div class="shimmer" style="grid-column:1/-1;grid-row:1/-1;width:100%;height:100%"></div>
       </div>
       <div class="al-info">
@@ -967,7 +1390,12 @@ function openCreateAlbum() {
 async function doCreateAlbum() {
   const name = $('al-name-inp').value.trim();
   if (!name) { toast('Enter a name', 'bad'); return; }
-  if (!/^[\w\s\-]+$/.test(name)) { toast('Use letters, numbers, spaces, _ or -', 'bad'); return; }
+  // Only allow letters, numbers, spaces, hyphens, underscores
+  // Block %, \, /, #, ?, &, =, +, @, !, $, ^, *, (, ), [, ], {, }, |, :, ;, ,, <, >, ', ", `, ~, .
+  if (!/^[a-zA-Z0-9 _\-]+$/.test(name)) {
+    toast('Only letters, numbers, spaces, - and _', 'bad'); return;
+  }
+  if (name.length > 50) { toast('Name too long (max 50 chars)', 'bad'); return; }
   closeM('m-create');
   try {
     await putFile(S.repo, `${name}/.gitkeep`, btoa(''), `Create album ${name}`);
@@ -980,6 +1408,40 @@ async function doCreateAlbum() {
     toast('Album created!', 'ok');
   } catch(e) { toast('Error: ' + e.message, 'bad'); }
 }
+
+async function doDownloadAlbum() {
+  const name = S.optAlbum;
+  closeM('m-al-opts');
+  showUL(`Downloading "${name}"…`);
+  try {
+    const images = await listImages(S.repo, name);
+    if (images.length === 0) { hideUL(); toast('Album is empty', 'bad'); return; }
+
+    const zip = new JSZip();
+    for (let i = 0; i < images.length; i++) {
+      const item = images[i];
+      updUL(`${item.name} (${i+1}/${images.length})`, ((i+1)/images.length)*100);
+      try {
+        const b64 = item.size < 800000
+          ? await contentsB64(S.repo, item.path)
+          : await blobB64(S.repo, item.sha);
+        zip.file(item.name, b64, { base64: true });
+      } catch(e) { console.warn('Skipping', item.name, e.message); }
+    }
+
+    updUL('Building ZIP…', 100);
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 3 } });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name}.zip`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    hideUL();
+    toast(`Downloaded ${images.length} photos`, 'ok');
+  } catch(e) { hideUL(); toast('Download failed: ' + e.message, 'bad'); }
+}
+
 
 function openAlOpts(name) {
   S.optAlbum = name;
@@ -1049,12 +1511,6 @@ async function doDeleteAlbum() {
 /* ═══════════════════════════════════════════════════════
    IMAGES
 ═══════════════════════════════════════════════════════ */
-async function openAlbum(name) {
-  S.album = name;
-  $('im-title').textContent = name;
-  show('s-images');
-  await loadImages();
-}
 
 function renderImageGrid() {
   const grid = $('im-grid');
@@ -1094,19 +1550,13 @@ async function loadThumbEl(item, i) {
     el.innerHTML = `<img src="${t}" alt="${item.name}" loading="lazy">`;
   } catch {
     const el = $(`th${i}`);
-    if (el) el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:11px">!</div>';
+    if (el) el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--label3);font-size:11px">!</div>';
   }
 }
 
 function thClick(i) {
   if (S.selMode) { toggleSel(i); return; }
   openViewer(i);
-}
-
-function goAlbums() {
-  exitSel();
-  show('s-albums');
-  loadAlbums();
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1329,7 +1779,7 @@ function openTransfer() {
   $('m-transfer-list').innerHTML = S.albums
     .filter(a => a.name !== S.album)
     .map(a => `<div class="mitem" onclick="doTransfer('${a.name}')"><span style="font-size:20px">📁</span><span>${a.name}</span></div>`)
-    .join('') || '<div style="padding:16px;color:var(--text2);font-size:14px">No other albums. Create one first.</div>';
+    .join('') || '<div style="padding:16px;color:var(--label2);font-size:14px">No other albums. Create one first.</div>';
   openM('m-transfer');
 }
 
@@ -1392,14 +1842,20 @@ async function doDelete() {
 async function switchRepo(idx) {
   S.repo = idx;
   localStorage.setItem('gc_repo', idx);
-  $('rsel-albums').value = idx;
-  $('rsel-images').value = idx;
-  delete _treeCache[`${idx}:${S.user}`]; // fresh cache for new repo
+  fillRepoSels();
+  delete _treeCache[`${idx}:${S.user}`];
   try { await ensureRepo(idx); } catch {}
 
   const active = document.querySelector('.screen.active')?.id;
-  if (active === 's-images') { S.album = 'Default'; await loadImages(); }
-  else await loadAlbums();
+  if (active === 's-images') {
+    S.album = 'Default';
+    $('im-title').textContent = 'Default';
+    navReplace({ screen: 'images', album: 'Default' }, albumToHash('Default'));
+    await loadImages();
+  } else {
+    navReplace({ screen: 'albums' }, '#albums');
+    await loadAlbums();
+  }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1423,7 +1879,8 @@ async function init() {
     }
   }
 
-  show('s-login');
+  showRaw('s-login');
+  history.replaceState(null, '', location.pathname);
   hideLoader();
 }
 
@@ -1432,9 +1889,9 @@ $('pat-inp').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin()
 // Enter on album name input
 $('al-name-inp').addEventListener('keydown', e => { if (e.key === 'Enter') doCreateAlbum(); });
 
-// Close modals on overlay click
+// Close modals on overlay click (animated)
 document.querySelectorAll('.mover').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on'); });
+  m.addEventListener('click', e => { if (e.target === m) closeM(m.id); });
 });
 
 init();
