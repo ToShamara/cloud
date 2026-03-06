@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>GitCloud</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07070A;
+  --surface: #0F0F14;
+  --surface2: #18181F;
+  --surface3: #222230;
+  --border: #2A2A38;
+  --accent: #E8A030;
+  --accent-glow: rgba(232,160,48,0.18);
+  --accent-dim: rgba(232,160,48,0.12);
+  --text: #EEEcE4;
+  --text2: #9999AA;
+  --text3: #55556A;
+  --danger: #E05050;
+  --success: #50C888;
+  --nav-h: 70px;
+  --r: 16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overscroll-behavior:none;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  font-size:15px;
+  min-height:100vh;
+  max-width:600px;
+  margin:0 auto;
+  overflow-x:hidden;
+  position:relative;
+}
+::-webkit-scrollbar{width:0;}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh;flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ── LOADER ── */
+#app-loader{
+  position:fixed;inset:0;z-index:900;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;
+  transition:opacity .5s;
+}
+#app-loader.fade{opacity:0;pointer-events:none;}
+#app-loader .logo-icon{font-size:48px;animation:pulse 1.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.12);}}
+
+/* ── SPINNER ── */
+.spinner{
+  width:36px;height:36px;border-radius:50%;
+  border:3px solid var(--border);
+  border-top-color:var(--accent);
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spinner.sm{width:20px;height:20px;border-width:2px;}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:calc(var(--nav-h)+20px);left:50%;
+  transform:translateX(-50%) translateY(12px);
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:14px;padding:12px 22px;font-size:14px;
+  white-space:nowrap;opacity:0;pointer-events:none;z-index:800;
+  transition:opacity .28s,transform .28s;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.ok{border-color:var(--success);color:var(--success);}
+#toast.bad{border-color:var(--danger);color:var(--danger);}
+
+/* ── LOGIN ── */
+#login-screen{
+  align-items:center;justify-content:center;
+  padding:36px 24px 50px;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 10%,rgba(232,160,48,.07) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 50% at 85% 80%,rgba(80,80,200,.05) 0%,transparent 60%),
+    var(--bg);
+}
+.login-mark{
+  width:80px;height:80px;border-radius:24px;
+  background:linear-gradient(135deg,#E8A030,#C46A10);
+  display:flex;align-items:center;justify-content:center;
+  font-size:38px;margin-bottom:28px;
+  box-shadow:0 8px 32px rgba(232,160,48,.35);
+}
+.login-h{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;letter-spacing:-1px;margin-bottom:10px;}
+.login-sub{color:var(--text2);line-height:1.6;text-align:center;font-size:14px;margin-bottom:40px;}
+.field{width:100%;margin-bottom:16px;}
+.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.7px;}
+.field input{
+  width:100%;background:var(--surface);border:1.5px solid var(--border);
+  border-radius:14px;color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:14px;padding:15px 16px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  background:linear-gradient(135deg,#E8A030,#C46A10);
+  color:#000;border:none;border-radius:14px;
+  font-family:'Syne',sans-serif;font-size:15px;font-weight:700;
+  padding:17px;cursor:pointer;transition:opacity .2s,transform .12s;
+  letter-spacing:.2px;
+}
+.btn:active{transform:scale(.98);opacity:.9;}
+.btn.ghost{background:var(--surface2);color:var(--text);background-image:none;}
+.btn.red{background:var(--danger);color:#fff;background-image:none;}
+.btn:disabled{opacity:.45;pointer-events:none;}
+.pat-note{margin-top:24px;font-size:12px;color:var(--text2);text-align:center;line-height:1.7;}
+.pat-note a{color:var(--accent);text-decoration:none;}
+
+/* ── HEADER ── */
+.hdr{
+  position:sticky;top:0;z-index:100;
+  background:rgba(7,7,10,.88);backdrop-filter:blur(14px);
+  padding:10px 14px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border);
+  min-height:56px;
+}
+.hdr-back{
+  width:38px;height:38px;background:var(--surface);border:none;
+  border-radius:11px;color:var(--text);font-size:19px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:background .15s;
+}
+.hdr-back:active{background:var(--surface3);}
+.hdr-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.repo-sel{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:11px;color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:500;padding:8px 28px 8px 12px;cursor:pointer;outline:none;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6' fill='none' stroke='%2399' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  transition:border-color .2s;flex-shrink:0;
+}
+.repo-sel:focus{border-color:var(--accent);}
+.hdr-ava{
+  width:34px;height:34px;border-radius:50%;overflow:hidden;
+  background:var(--surface2);flex-shrink:0;border:2px solid var(--border);
+}
+.hdr-ava img{width:100%;height:100%;object-fit:cover;}
+
+/* ── ALBUM GRID ── */
+.al-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px;padding-bottom:calc(var(--nav-h)+16px);}
+.al-card{
+  background:var(--surface);border-radius:var(--r);overflow:hidden;
+  cursor:pointer;border:1.5px solid var(--border);
+  transition:transform .18s,border-color .18s;
+}
+.al-card:active{transform:scale(.965);border-color:var(--accent);}
+
+/* Album cover 2×2 */
+.al-cover{
+  width:100%;aspect-ratio:1;display:grid;
+  grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+  overflow:hidden;background:var(--surface2);position:relative;
+}
+.al-cell{overflow:hidden;background:var(--surface2);}
+.al-cell img{width:100%;height:100%;object-fit:cover;display:block;}
+.al-empty-cover{
+  display:flex;align-items:center;justify-content:center;
+  aspect-ratio:1;background:var(--surface2);
+  color:var(--text3);font-size:36px;
+}
+.al-info{padding:12px 12px 14px;display:flex;align-items:center;justify-content:space-between;}
+.al-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;}
+.al-count{font-size:12px;color:var(--text2);margin-top:2px;}
+.al-menu{
+  width:30px;height:30px;background:none;border:none;
+  color:var(--text3);font-size:17px;cursor:pointer;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;transition:background .15s;
+}
+.al-menu:active{background:var(--surface3);}
+
+/* ── IMAGES GRID ── */
+.im-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px;padding-bottom:calc(var(--nav-h)+16px);}
+.im-th{
+  aspect-ratio:1;overflow:hidden;cursor:pointer;
+  background:var(--surface2);position:relative;transition:opacity .15s;
+}
+.im-th img{width:100%;height:100%;object-fit:cover;display:block;}
+.im-th.sel::after{
+  content:'✓';position:absolute;inset:0;
+  background:rgba(232,160,48,.55);
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:700;color:#fff;
+}
+.shimmer{
+  width:100%;height:100%;
+  background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);
+  background-size:200% 100%;animation:shim 1.4s infinite;
+}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── VIEWER ── */
+#viewer{
+  position:fixed;inset:0;z-index:500;
+  background:#000;display:none;flex-direction:column;
+  touch-action:pan-y;
+}
+#viewer.active{display:flex;}
+.vhdr{
+  position:absolute;top:0;left:0;right:0;padding:env(safe-area-inset-top,12px) 14px 14px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.8),transparent);
+  display:flex;align-items:flex-end;gap:12px;z-index:10;padding-top:max(env(safe-area-inset-top,0px),14px);
+}
+.vbody{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+#vimg{max-width:100%;max-height:100%;object-fit:contain;display:none;}
+.vload{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+.vload p{font-size:13px;color:rgba(255,255,255,.4);}
+.vfoot{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:14px 14px calc(env(safe-area-inset-bottom,0px)+14px);
+  background:linear-gradient(to top,rgba(0,0,0,.8),transparent);
+  display:flex;align-items:center;justify-content:space-between;z-index:10;
+}
+.vnav{font-size:12px;color:rgba(255,255,255,.35);text-align:center;}
+.ibtn{
+  width:46px;height:46px;background:rgba(255,255,255,.13);
+  backdrop-filter:blur(8px);border:none;border-radius:13px;
+  color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.ibtn:active{background:rgba(255,255,255,.28);}
+.ibtn.acc{background:var(--accent);color:#000;}
+
+/* ── FAB ── */
+.fab{
+  position:fixed;right:18px;bottom:calc(var(--nav-h)+14px);
+  width:58px;height:58px;border-radius:50%;
+  background:linear-gradient(135deg,#E8A030,#C46A10);
+  border:none;font-size:26px;color:#000;cursor:pointer;z-index:90;
+  box-shadow:0 6px 24px rgba(232,160,48,.45);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .18s;
+}
+.fab:active{transform:scale(.91);}
+
+/* ── BOTTOM NAV ── */
+.bnav{
+  display:none;/* hidden by default, shown in specific screens */
+}
+
+/* ── SELECT BAR ── */
+#sel-bar{
+  position:fixed;top:0;left:0;right:0;max-width:600px;margin:0 auto;z-index:200;
+  background:linear-gradient(135deg,#E8A030,#C46A10);
+  padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+  transform:translateY(-100%);transition:transform .28s;
+}
+#sel-bar.on{transform:translateY(0);}
+.sel-title{font-family:'Syne',sans-serif;font-weight:700;color:#000;font-size:15px;}
+.sel-acts{display:flex;gap:8px;}
+.sel-btn{
+  background:rgba(0,0,0,.15);border:none;border-radius:9px;
+  color:#000;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+}
+.sel-btn.del{background:rgba(200,0,0,.2);color:#8B0000;}
+
+/* ── MODALS ── */
+.mover{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);
+  backdrop-filter:blur(5px);z-index:600;
+  display:none;align-items:flex-end;justify-content:center;
+}
+.mover.on{display:flex;}
+.modal{
+  background:var(--surface);border-radius:26px 26px 0 0;
+  padding:20px 20px calc(env(safe-area-inset-bottom,0px)+32px);
+  width:100%;max-width:600px;animation:mup .28s ease;
+}
+@keyframes mup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhandle{width:38px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;}
+.mtitle{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:18px;}
+.mlist{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;}
+.mitem{
+  display:flex;align-items:center;gap:13px;padding:14px;
+  background:var(--surface2);border-radius:13px;cursor:pointer;
+  transition:background .15s;font-size:15px;
+}
+.mitem:active{background:var(--surface3);}
+
+/* ── UPLOAD OVERLAY ── */
+#ul-over{
+  position:fixed;inset:0;background:rgba(0,0,0,.72);
+  z-index:700;display:none;align-items:center;justify-content:center;
+}
+#ul-over.on{display:flex;}
+.ul-card{
+  background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:22px;padding:28px 24px;width:300px;text-align:center;
+}
+.ul-card h3{font-family:'Syne',sans-serif;font-size:18px;margin-bottom:8px;}
+.ul-card p{font-size:13px;color:var(--text2);margin-bottom:18px;min-height:20px;}
+.pbar{height:4px;background:var(--border);border-radius:3px;overflow:hidden;}
+.pfill{height:100%;background:linear-gradient(90deg,#E8A030,#C46A10);border-radius:3px;transition:width .3s;}
+
+/* ── EMPTY STATE ── */
+.empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:64px 24px;gap:14px;color:var(--text2);text-align:center;
+  grid-column:1/-1;
+}
+.empty-ico{font-size:60px;opacity:.35;}
+.empty h3{font-family:'Syne',sans-serif;font-size:18px;color:var(--text);}
+.empty p{font-size:14px;line-height:1.65;}
+
+/* ── SECTION LABEL ── */
+.sec-label{
+  padding:16px 16px 8px;
+  font-size:11px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);
+}
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="app-loader">
+  <div class="logo-icon">☁️</div>
+  <div class="spinner"></div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ════════════════════ LOGIN ════════════════════ -->
+<div class="screen" id="s-login">
+  <div class="login-mark">☁️</div>
+  <h1 class="login-h">GitCloud</h1>
+  <p class="login-sub">Private photo storage powered<br>by your GitHub repositories.</p>
+
+  <div class="field">
+    <label>GitHub Personal Access Token</label>
+    <input type="password" id="pat-inp" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off" autocorrect="off">
+  </div>
+
+  <button class="btn" id="login-btn" onclick="doLogin()">
+    <span style="font-size:18px">🔑</span> Sign in with GitHub
+  </button>
+
+  <p class="pat-note">
+    Create a token at <a href="https://github.com/settings/tokens/new" target="_blank">GitHub → Settings → Developer settings</a><br>
+    → Personal access tokens → Generate new token (classic).<br><br>
+    Required scope: <strong>repo</strong> (full control of private repos)
+  </p>
+</div>
+
+<!-- ════════════════════ ALBUMS ════════════════════ -->
+<div class="screen" id="s-albums">
+  <div class="hdr">
+    <div style="flex:1">
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.5px">GitCloud</div>
+    </div>
+    <select class="repo-sel" id="rsel-albums" onchange="switchRepo(+this.value)"></select>
+    <div class="hdr-ava"><img id="ava" src="" alt=""></div>
+  </div>
+  <div class="al-grid" id="al-grid"></div>
+  <button class="fab" onclick="openCreateAlbum()" title="New Album">＋</button>
+</div>
+
+<!-- ════════════════════ IMAGES ════════════════════ -->
+<div class="screen" id="s-images">
+  <div id="sel-bar">
+    <span class="sel-title" id="sel-count">0 selected</span>
+    <div class="sel-acts">
+      <button class="sel-btn" onclick="openTransfer()">Move</button>
+      <button class="sel-btn del" onclick="doDelete()">Delete</button>
+      <button class="sel-btn" onclick="exitSel()">Cancel</button>
+    </div>
+  </div>
+  <div class="hdr" id="im-hdr">
+    <button class="hdr-back" onclick="goAlbums()">←</button>
+    <div class="hdr-title" id="im-title">Album</div>
+    <button class="hdr-back" onclick="loadImages(true)" title="Refresh" style="font-size:17px">↻</button>
+    <select class="repo-sel" id="rsel-images" onchange="switchRepo(+this.value)"></select>
+  </div>
+  <div class="im-grid" id="im-grid"></div>
+  <button class="fab" onclick="triggerUp()" title="Upload">＋</button>
+  <input type="file" id="file-inp" accept="image/*" multiple style="display:none" onchange="handleUp(event)">
+</div>
+
+<!-- ════════════════════ VIEWER ════════════════════ -->
+<div id="viewer">
+  <div class="vhdr">
+    <button class="ibtn" onclick="closeViewer()">✕</button>
+    <div style="flex:1;padding:0 4px">
+      <div style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="v-name">photo.jpg</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px" id="v-info"></div>
+    </div>
+    <button class="ibtn" onclick="openViewerMenu()" style="font-size:16px">⋮</button>
+  </div>
+  <div class="vbody" id="vbody">
+    <div class="vload" id="vload"><div class="spinner"></div><p>Loading full resolution…</p></div>
+    <img id="vimg" src="" alt="">
+  </div>
+  <div class="vfoot">
+    <button class="ibtn" onclick="vPrev()" id="v-prev-btn">←</button>
+    <div style="text-align:center">
+      <div class="vnav" id="v-pos"></div>
+      <button class="ibtn acc" onclick="dlCurrent()" style="margin-top:6px">⬇</button>
+    </div>
+    <button class="ibtn" onclick="vNext()" id="v-next-btn">→</button>
+  </div>
+</div>
+
+<!-- ════════════════════ MODALS ════════════════════ -->
+
+<!-- Create Album -->
+<div class="mover" id="m-create">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">New Album</div>
+    <div class="field">
+      <label>Album Name</label>
+      <input type="text" id="al-name-inp" placeholder="Holidays 2025" maxlength="50">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn ghost" onclick="closeM('m-create')">Cancel</button>
+      <button class="btn" onclick="doCreateAlbum()">Create Album</button>
+    </div>
+  </div>
+</div>
+
+<!-- Album Options -->
+<div class="mover" id="m-al-opts">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle" id="m-al-opts-title">Album Options</div>
+    <div class="mlist">
+      <div class="mitem" onclick="doDeleteAlbum()">
+        <span style="font-size:20px">🗑️</span>
+        <div>
+          <div>Delete Album</div>
+          <div style="font-size:12px;color:var(--text2)">Removes album and all photos inside</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn ghost" style="margin-top:14px" onclick="closeM('m-al-opts')">Cancel</button>
+  </div>
+</div>
+
+<!-- Transfer -->
+<div class="mover" id="m-transfer">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">Move to Album</div>
+    <div class="mlist" id="m-transfer-list"></div>
+    <button class="btn ghost" style="margin-top:14px" onclick="closeM('m-transfer')">Cancel</button>
+  </div>
+</div>
+
+<!-- Viewer menu -->
+<div class="mover" id="m-v-menu">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mlist">
+      <div class="mitem" onclick="dlCurrent();closeM('m-v-menu')">
+        <span style="font-size:20px">⬇️</span><span>Download photo</span>
+      </div>
+      <div class="mitem" onclick="vMoveToAlbum();closeM('m-v-menu')">
+        <span style="font-size:20px">📁</span><span>Move to album…</span>
+      </div>
+      <div class="mitem" onclick="vDeleteCurrent();closeM('m-v-menu')" style="color:var(--danger)">
+        <span style="font-size:20px">🗑️</span><span>Delete photo</span>
+      </div>
+    </div>
+    <button class="btn ghost" style="margin-top:14px" onclick="closeM('m-v-menu')">Cancel</button>
+  </div>
+</div>
+
+<!-- Move single (from viewer) -->
+<div class="mover" id="m-v-move">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">Move to Album</div>
+    <div class="mlist" id="m-v-move-list"></div>
+    <button class="btn ghost" style="margin-top:14px" onclick="closeM('m-v-move')">Cancel</button>
+  </div>
+</div>
+
+<!-- Upload overlay -->
+<div id="ul-over">
+  <div class="ul-card">
+    <h3 id="ul-h">Uploading</h3>
+    <p id="ul-status">Preparing…</p>
+    <div class="pbar"><div class="pfill" id="ul-fill" style="width:0%"></div></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+const S = {
+  token:   localStorage.getItem('gc_tok') || '',
+  user:    localStorage.getItem('gc_usr') || '',
+  ava:     localStorage.getItem('gc_ava') || '',
+  repo:    +(localStorage.getItem('gc_repo') || 0),
+  albums:  [],
+  album:   'Default',
+  images:  [],
+  vi:      0,       // viewer index
+  selMode: false,
+  sel:     new Set(),
+  optAlbum: null,
+};
+
+const REPO_N = i => `GitHubCloud-${i}`;
+const REPO_LABEL = i => `Slike ${i + 1}`;
+// Accept any non-dot file that isn't .gitkeep — broad to handle all phone formats
+const IMG_EXT = /\.(jpe?g|jfif|png|gif|webp|heic?|heif|bmp|tiff?|avif|raw|dng|cr2|nef|orf|arw|rw2|pef|srw|raf|3fr|jpg)$/i;
+const NOT_IMG = /^\.|(\.gitkeep$)/;
+
+/* ═══════════════════════════════════════════════════════
+   INDEXED DB
+═══════════════════════════════════════════════════════ */
+let db;
+
+async function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('gc3', 3);
+    r.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('th')) d.createObjectStore('th');
+      if (!d.objectStoreNames.contains('full')) d.createObjectStore('full');
+    };
+    r.onsuccess = e => res(e.target.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+const dbGet = (st, k) => new Promise(r => { const t = db.transaction(st,'readonly'); t.objectStore(st).get(k).onsuccess = e => r(e.target.result); t.onerror = () => r(null); });
+const dbSet = (st, k, v) => new Promise(r => { const t = db.transaction(st,'readwrite'); t.objectStore(st).put(v,k); t.oncomplete = r; t.onerror = r; });
+const dbDel = (st, k) => new Promise(r => { const t = db.transaction(st,'readwrite'); t.objectStore(st).delete(k); t.oncomplete = r; t.onerror = r; });
+
+/* ═══════════════════════════════════════════════════════
+   GITHUB API
+═══════════════════════════════════════════════════════ */
+function encPath(p) {
+  return p.split('/').map(encodeURIComponent).join('/');
+}
+
+async function gh(path, opts = {}) {
+  const url = path.startsWith('http') ? path : `https://api.github.com${path}`;
+  const r = await fetch(url, {
+    ...opts,
+    headers: {
+      Authorization: `token ${S.token}`,
+      Accept: 'application/vnd.github.v3+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(opts.headers || {}),
+    },
+  });
+  if (r.status === 204) return null;
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.message || `HTTP ${r.status}`);
+  return j;
+}
+
+async function ghRaw(path) {
+  const r = await fetch(`https://api.github.com${path}`, {
+    headers: {
+      Authorization: `token ${S.token}`,
+      Accept: 'application/vnd.github.raw',
+    },
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.arrayBuffer();
+}
+
+async function getUser() { return gh('/user'); }
+
+async function ensureRepo(idx) {
+  const name = REPO_N(idx);
+  try { return await gh(`/repos/${S.user}/${name}`); }
+  catch {
+    return gh('/user/repos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, private: true, description: 'GitCloud photo storage', auto_init: true }),
+    });
+  }
+}
+
+// Cache the tree per repo to avoid repeated API calls
+const _treeCache = {};
+
+async function getRepoTree(idx) {
+  const cacheKey = `${idx}:${S.user}`;
+  // Always refresh on explicit calls; cache only for same request burst
+  try {
+    const repoInfo = await gh(`/repos/${S.user}/${REPO_N(idx)}`);
+    const branch = repoInfo.default_branch || 'main';
+    const treeRes = await gh(`/repos/${S.user}/${REPO_N(idx)}/git/trees/${branch}?recursive=1`);
+    _treeCache[cacheKey] = treeRes.tree || [];
+    return _treeCache[cacheKey];
+  } catch(e) {
+    // If tree API fails, try Contents API as fallback
+    if (e.message.includes('409') || e.message.includes('empty') || e.message.includes('Git Repository is empty')) {
+      _treeCache[cacheKey] = [];
+      return [];
+    }
+    throw e;
+  }
+}
+
+async function lsDir(idx, path = '') {
+  try {
+    const url = path
+      ? `/repos/${S.user}/${REPO_N(idx)}/contents/${encPath(path)}`
+      : `/repos/${S.user}/${REPO_N(idx)}/contents`;
+    const r = await gh(url);
+    return Array.isArray(r) ? r : [];
+  } catch(e) {
+    if (e.message.includes('404') || e.message.includes('Not Found') ||
+        e.message.includes('empty') || e.message.includes('409')) return [];
+    throw e;
+  }
+}
+
+// Reliable image listing using Git Trees API with Contents API fallback
+async function listImages(idx, album) {
+  // Primary: Git Trees API (most reliable, works even if Contents returns weird results)
+  try {
+    const tree = await getRepoTree(idx);
+    const prefix = album + '/';
+    const results = tree
+      .filter(item => {
+        if (item.type !== 'blob') return false;
+        if (!item.path.startsWith(prefix)) return false;
+        const name = item.path.slice(prefix.length);
+        // No slashes (not a subdirectory), not a dotfile, not .gitkeep
+        if (name.includes('/') || NOT_IMG.test(name)) return false;
+        return true;
+      })
+      .map(item => ({
+        name: item.path.split('/').pop(),
+        path: item.path,
+        sha: item.sha,
+        size: item.size || 0,
+        type: 'file',
+      }));
+    if (results.length > 0 || tree.length > 0) return results;
+    // Fall through to Contents API if tree returned nothing (might be empty repo)
+  } catch(e) {
+    console.warn('Tree API failed, falling back to Contents API:', e.message);
+  }
+
+  // Fallback: Contents API
+  try {
+    const items = await lsDir(idx, album);
+    return items.filter(x => x.type === 'file' && !NOT_IMG.test(x.name));
+  } catch(e) {
+    throw new Error(`Could not list album "${album}": ${e.message}`);
+  }
+}
+
+// List directories using Git Tree API as primary (avoids CDN stale cache from Contents API)
+async function listDirs(idx) {
+  try {
+    const tree = await getRepoTree(idx);
+    const topDirs = new Set();
+    tree.forEach(item => {
+      const parts = item.path.split('/');
+      if (parts.length >= 2 && !parts[0].startsWith('.')) topDirs.add(parts[0]);
+    });
+    return [...topDirs].map(name => ({ name, path: name, type: 'dir' }));
+  } catch(e) {
+    // Fallback to Contents API
+    try {
+      const items = await lsDir(idx, '');
+      return items.filter(x => x.type === 'dir');
+    } catch { return []; }
+  }
+}
+
+async function blobB64(idx, sha) {
+  const j = await gh(`/repos/${S.user}/${REPO_N(idx)}/git/blobs/${sha}`);
+  return j.content.replace(/\s/g, '');
+}
+
+async function contentsB64(idx, path) {
+  const j = await gh(`/repos/${S.user}/${REPO_N(idx)}/contents/${encPath(path)}`);
+  return j.content.replace(/\s/g, '');
+}
+
+async function putFile(idx, path, b64, msg, sha = null) {
+  const body = { message: msg, content: b64 };
+  if (sha) body.sha = sha;
+  return gh(`/repos/${S.user}/${REPO_N(idx)}/contents/${encPath(path)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+async function rmFile(idx, path, sha, msg) {
+  return gh(`/repos/${S.user}/${REPO_N(idx)}/contents/${encPath(path)}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: msg, sha }),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   IMAGE UTILS
+═══════════════════════════════════════════════════════ */
+function b64ToUrl(b64, mime = 'image/jpeg') {
+  return `data:${mime};base64,${b64}`;
+}
+
+function mime(name) {
+  const e = name.split('.').pop().toLowerCase();
+  return ({ jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png',
+            gif:'image/gif', webp:'image/webp', heic:'image/heic',
+            heif:'image/heif', bmp:'image/bmp', avif:'image/avif',
+            tiff:'image/tiff', tif:'image/tiff' })[e] || 'image/jpeg';
+}
+
+function loadImg(src) {
+  return new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = src;
+  });
+}
+
+function compress(imgEl, maxDim, q) {
+  const c = document.createElement('canvas');
+  let w = imgEl.naturalWidth, h = imgEl.naturalHeight;
+  if (w > maxDim || h > maxDim) {
+    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+    else { w = Math.round(w * maxDim / h); h = maxDim; }
+  }
+  c.width = w; c.height = h;
+  c.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', q);
+}
+
+async function getThumb(idx, item) {
+  const k = `${idx}:${item.sha}:t`;
+  const hit = await dbGet('th', k);
+  if (hit) return hit;
+  const b64 = item.size < 600000 ? await contentsB64(idx, item.path) : await blobB64(idx, item.sha);
+  const el = await loadImg(b64ToUrl(b64, mime(item.name)));
+  const t = compress(el, 130, 0.5);
+  await dbSet('th', k, t);
+  return t;
+}
+
+async function getFull(idx, item) {
+  const k = `${idx}:${item.sha}:f`;
+  const hit = await dbGet('full', k);
+  if (hit) return hit;
+  const b64 = item.size < 800000 ? await contentsB64(idx, item.path) : await blobB64(idx, item.sha);
+  const url = b64ToUrl(b64, mime(item.name));
+  await dbSet('full', k, url);
+  return url;
+}
+
+/* ═══════════════════════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+function openM(id) { $(id).classList.add('on'); }
+function closeM(id) { $(id).classList.remove('on'); }
+
+let toastT;
+function toast(msg, cls = '') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = `toast show ${cls}`;
+  clearTimeout(toastT);
+  toastT = setTimeout(() => (t.className = 'toast'), 3000);
+}
+
+function hideLoader() {
+  const l = $('app-loader');
+  l.classList.add('fade');
+  setTimeout(() => l.remove(), 600);
+}
+
+function fmtSz(b) {
+  if (b < 1024) return b + 'B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + 'KB';
+  return (b / 1048576).toFixed(1) + 'MB';
+}
+
+function fillRepoSels() {
+  const html = Array.from({length:10}, (_,i) =>
+    `<option value="${i}"${i===S.repo?' selected':''}>${REPO_LABEL(i)}</option>`
+  ).join('');
+  $('rsel-albums').innerHTML = html;
+  $('rsel-images').innerHTML = html;
+}
+
+/* Upload overlay */
+function showUL(h = 'Working…') {
+  $('ul-h').textContent = h;
+  $('ul-status').textContent = '';
+  $('ul-fill').style.width = '0%';
+  $('ul-over').classList.add('on');
+}
+function updUL(status, pct) {
+  $('ul-status').textContent = status;
+  $('ul-fill').style.width = pct + '%';
+}
+function hideUL() { $('ul-over').classList.remove('on'); }
+
+/* ═══════════════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════════════ */
+async function doLogin() {
+  const tok = $('pat-inp').value.trim();
+  if (!tok) { toast('Paste your GitHub token', 'bad'); return; }
+  const btn = $('login-btn');
+  btn.disabled = true;
+  btn.textContent = 'Connecting…';
+  S.token = tok;
+  try {
+    const u = await getUser();
+    S.user = u.login;
+    S.ava  = u.avatar_url;
+    localStorage.setItem('gc_tok', tok);
+    localStorage.setItem('gc_usr', u.login);
+    localStorage.setItem('gc_ava', u.avatar_url);
+    await boot();
+  } catch(e) {
+    toast('Invalid token: ' + e.message, 'bad');
+    S.token = '';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span style="font-size:18px">🔑</span> Sign in with GitHub';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════════════ */
+async function boot() {
+  fillRepoSels();
+  $('ava').src = S.ava;
+  try { await ensureRepo(S.repo); } catch {}
+  await loadAlbums();
+  show('s-albums');
+  hideLoader();
+}
+
+/* ═══════════════════════════════════════════════════════
+   ALBUMS
+═══════════════════════════════════════════════════════ */
+function renderAlbumGrid() {
+  const grid = $('al-grid');
+  const dirs = S.albums;
+  if (dirs.length === 0) {
+    grid.innerHTML = '<div class="empty"><div class="empty-ico">📁</div><h3>No Albums</h3><p>Tap + to create your first album</p></div>';
+    return;
+  }
+  grid.innerHTML = dirs.map(d => `
+    <div class="al-card" id="alcard-${d.name}" onclick="openAlbum('${escQ(d.name)}')">
+      <div id="alcover-${d.name}" class="al-cover" style="background:var(--surface2)">
+        <div class="shimmer" style="grid-column:1/-1;grid-row:1/-1;width:100%;height:100%"></div>
+      </div>
+      <div class="al-info">
+        <div>
+          <div class="al-name">${d.name === 'Default' ? '⭐ ' : ''}${d.name}</div>
+          <div class="al-count" id="alcount-${d.name}">…</div>
+        </div>
+        ${d.name !== 'Default' ? `<button class="al-menu" onclick="event.stopPropagation();openAlOpts('${escQ(d.name)}')">⋯</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+  dirs.forEach(d => loadAlbumCover(d));
+}
+
+function escQ(s) { return s.replace(/'/g, "\\'"); }
+
+async function loadAlbums() {
+  const grid = $('al-grid');
+  grid.innerHTML = '<div class="empty"><div class="spinner"></div></div>';
+  delete _treeCache[`${S.repo}:${S.user}`];
+
+  try {
+    let dirs = await listDirs(S.repo);
+
+    if (!dirs.find(d => d.name === 'Default')) {
+      await putFile(S.repo, 'Default/.gitkeep', btoa(''), 'Init Default album');
+      delete _treeCache[`${S.repo}:${S.user}`];
+      dirs = [{ name:'Default', path:'Default', type:'dir' }, ...dirs];
+    }
+
+    dirs.sort((a, b) => a.name === 'Default' ? -1 : b.name === 'Default' ? 1 : a.name.localeCompare(b.name));
+    S.albums = dirs;
+    renderAlbumGrid();
+  } catch(e) {
+    grid.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
+  }
+}
+
+async function loadAlbumCover(dir) {
+  try {
+    const imgs = await listImages(S.repo, dir.path || dir.name);
+    const recent = imgs.slice(-4);
+
+    const countEl = $(`alcount-${dir.name}`);
+    if (countEl) countEl.textContent = `${imgs.length} photo${imgs.length !== 1 ? 's' : ''}`;
+
+    const coverEl = $(`alcover-${dir.name}`);
+    if (!coverEl) return;
+
+    if (recent.length === 0) {
+      coverEl.outerHTML = `<div class="al-empty-cover" id="alcover-${dir.name}">🖼️</div>`;
+      return;
+    }
+
+    // Build 2×2 grid
+    const cells = Array.from({length:4}, (_, i) => {
+      const img = recent[i];
+      return `<div class="al-cell" id="alcell-${dir.name}-${i}">
+        ${img ? '<div class="shimmer"></div>' : '<div style="background:var(--surface)"></div>'}
+      </div>`;
+    });
+    coverEl.innerHTML = cells.join('');
+    coverEl.style.display = 'grid';
+
+    // Load thumbnails
+    recent.forEach(async (img, i) => {
+      const el = $(`alcell-${dir.name}-${i}`);
+      if (!el) return;
+      try {
+        const t = await getThumb(S.repo, img);
+        if (el) el.innerHTML = `<img src="${t}" alt="" loading="lazy">`;
+      } catch {}
+    });
+
+  } catch {}
+}
+
+/* ═══════════════════════════════════════════════════════
+   ALBUM CRUD
+═══════════════════════════════════════════════════════ */
+function openCreateAlbum() {
+  $('al-name-inp').value = '';
+  openM('m-create');
+  setTimeout(() => $('al-name-inp').focus(), 300);
+}
+
+async function doCreateAlbum() {
+  const name = $('al-name-inp').value.trim();
+  if (!name) { toast('Enter a name', 'bad'); return; }
+  if (!/^[\w\s\-]+$/.test(name)) { toast('Use letters, numbers, spaces, _ or -', 'bad'); return; }
+  closeM('m-create');
+  try {
+    await putFile(S.repo, `${name}/.gitkeep`, btoa(''), `Create album ${name}`);
+    delete _treeCache[`${S.repo}:${S.user}`];
+    // Optimistic update: add to local state and re-render immediately
+    const newDir = { name, path: name, type: 'dir' };
+    S.albums.push(newDir);
+    S.albums.sort((a, b) => a.name === 'Default' ? -1 : b.name === 'Default' ? 1 : a.name.localeCompare(b.name));
+    renderAlbumGrid();
+    toast('Album created!', 'ok');
+  } catch(e) { toast('Error: ' + e.message, 'bad'); }
+}
+
+function openAlOpts(name) {
+  S.optAlbum = name;
+  $('m-al-opts-title').textContent = name;
+  openM('m-al-opts');
+}
+
+async function doDeleteAlbum() {
+  const name = S.optAlbum;
+  closeM('m-al-opts');
+  if (!confirm(`Delete album "${name}" and ALL photos in it? This cannot be undone.`)) return;
+
+  showUL('Deleting album…');
+
+  // Optimistic UI: remove album card immediately
+  const card = $(`alcard-${name}`);
+  if (card) card.remove();
+  S.albums = S.albums.filter(a => a.name !== name);
+
+  try {
+    // Use Contents API for this specific folder to get actual SHAs needed for deletion
+    let allItems = [];
+    try {
+      const raw = await lsDir(S.repo, name);
+      allItems = raw.filter(x => x.type === 'file');
+    } catch {}
+    // Also try tree API to get any files the Contents API might miss
+    if (allItems.length === 0) {
+      try {
+        const tree = await getRepoTree(S.repo);
+        const prefix = name + '/';
+        const treeItems = tree.filter(x => x.type === 'blob' && x.path.startsWith(prefix));
+        // Need SHAs from Contents API for each file to delete
+        for (const ti of treeItems) {
+          try {
+            const info = await gh(`/repos/${S.user}/${REPO_N(S.repo)}/contents/${encPath(ti.path)}`);
+            if (info && info.sha) allItems.push({ name: info.name, path: ti.path, sha: info.sha });
+          } catch {}
+        }
+      } catch {}
+    }
+
+    for (let i = 0; i < allItems.length; i++) {
+      updUL(`Deleting ${allItems[i].name} (${i+1}/${allItems.length})`, ((i+1) / Math.max(allItems.length,1)) * 100);
+      try {
+        await rmFile(S.repo, allItems[i].path, allItems[i].sha, `Delete ${allItems[i].name}`);
+      } catch(e) {
+        console.warn('Could not delete', allItems[i].path, e.message);
+      }
+    }
+
+    delete _treeCache[`${S.repo}:${S.user}`];
+    hideUL();
+    toast('Album deleted', 'ok');
+    // Check if grid is now empty
+    if (S.albums.length === 0) {
+      $('al-grid').innerHTML = '<div class="empty"><div class="empty-ico">📁</div><h3>No Albums</h3><p>Tap + to create your first album</p></div>';
+    }
+  } catch(e) {
+    hideUL();
+    toast('Error: ' + e.message, 'bad');
+    // Re-load on error to restore correct state
+    await loadAlbums();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   IMAGES
+═══════════════════════════════════════════════════════ */
+async function openAlbum(name) {
+  S.album = name;
+  $('im-title').textContent = name;
+  show('s-images');
+  await loadImages();
+}
+
+function renderImageGrid() {
+  const grid = $('im-grid');
+  exitSel();
+  if (S.images.length === 0) {
+    grid.innerHTML = `<div class="empty">
+      <div class="empty-ico">📷</div>
+      <h3>No Photos Yet</h3>
+      <p>Tap + to upload your first photo</p>
+      <button class="btn ghost" style="margin-top:16px;width:auto;padding:11px 22px;font-size:13px" onclick="loadImages(true)">↻ Refresh</button>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = S.images.map((_, i) => `
+    <div class="im-th" id="th${i}" onclick="thClick(${i})" ontouchstart="" oncontextmenu="event.preventDefault();enterSel(${i})">
+      <div class="shimmer"></div>
+    </div>
+  `).join('');
+  S.images.forEach((img, i) => loadThumbEl(img, i));
+}
+
+async function loadImages(forceRefresh = false) {
+  delete _treeCache[`${S.repo}:${S.user}`];
+  try {
+    S.images = await listImages(S.repo, S.album);
+    renderImageGrid();
+  } catch(e) {
+    $('im-grid').innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
+  }
+}
+
+async function loadThumbEl(item, i) {
+  try {
+    const t = await getThumb(S.repo, item);
+    const el = $(`th${i}`);
+    if (!el) return;
+    el.innerHTML = `<img src="${t}" alt="${item.name}" loading="lazy">`;
+  } catch {
+    const el = $(`th${i}`);
+    if (el) el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:11px">!</div>';
+  }
+}
+
+function thClick(i) {
+  if (S.selMode) { toggleSel(i); return; }
+  openViewer(i);
+}
+
+function goAlbums() {
+  exitSel();
+  show('s-albums');
+  loadAlbums();
+}
+
+/* ═══════════════════════════════════════════════════════
+   VIEWER
+═══════════════════════════════════════════════════════ */
+async function openViewer(i) {
+  S.vi = i;
+  const item = S.images[i];
+  if (!item) return;
+
+  $('v-name').textContent = item.name;
+  $('v-info').textContent = `${S.album} · ${fmtSz(item.size)} · ${i+1}/${S.images.length}`;
+  $('v-pos').textContent  = `${i+1} / ${S.images.length}`;
+  $('vimg').style.display = 'none';
+  $('vload').style.display = 'flex';
+
+  $('v-prev-btn').style.opacity = i > 0 ? '1' : '0.2';
+  $('v-next-btn').style.opacity = i < S.images.length-1 ? '1' : '0.2';
+
+  $('viewer').classList.add('active');
+
+  try {
+    const url = await getFull(S.repo, item);
+    $('vimg').src = url;
+    $('vimg').style.display = 'block';
+    $('vload').style.display = 'none';
+  } catch(e) {
+    toast('Could not load: ' + e.message, 'bad');
+  }
+}
+
+function closeViewer() { $('viewer').classList.remove('active'); }
+
+function vPrev() { if (S.vi > 0) openViewer(S.vi - 1); }
+function vNext() { if (S.vi < S.images.length - 1) openViewer(S.vi + 1); }
+
+function openViewerMenu() { openM('m-v-menu'); }
+
+async function dlCurrent() {
+  const item = S.images[S.vi];
+  let url = $('vimg').src;
+  if (!url || !url.startsWith('data:')) {
+    try { url = await getFull(S.repo, item); } catch(e) { toast('Not ready yet', 'bad'); return; }
+  }
+  const a = document.createElement('a');
+  a.href = url; a.download = item.name; a.click();
+  toast('Downloading…', 'ok');
+}
+
+function vMoveToAlbum() {
+  const list = $('m-v-move-list');
+  list.innerHTML = S.albums
+    .filter(a => a.name !== S.album)
+    .map(a => `<div class="mitem" onclick="doVMove('${a.name}')"><span style="font-size:20px">📁</span><span>${a.name}</span></div>`)
+    .join('');
+  openM('m-v-move');
+}
+
+async function doVMove(target) {
+  closeM('m-v-move');
+  const item = S.images[S.vi];
+  const fromIdx = S.vi;
+  closeViewer();
+  showUL('Moving…');
+  try {
+    const b64 = item.size < 800000 ? await contentsB64(S.repo, item.path) : await blobB64(S.repo, item.sha);
+    await putFile(S.repo, `${target}/${item.name}`, b64, `Move ${item.name} to ${target}`);
+    await rmFile(S.repo, item.path, item.sha, `Remove ${item.name}`);
+    delete _treeCache[`${S.repo}:${S.user}`];
+    // Optimistic: remove from local list and re-render
+    S.images.splice(fromIdx, 1);
+    renderImageGrid();
+    hideUL();
+    toast('Moved!', 'ok');
+  } catch(e) { hideUL(); toast('Error: ' + e.message, 'bad'); await loadImages(); }
+}
+
+async function vDeleteCurrent() {
+  const item = S.images[S.vi];
+  if (!confirm(`Delete "${item.name}"?`)) return;
+  const fromIdx = S.vi;
+  closeViewer();
+  showUL('Deleting…');
+  try {
+    await rmFile(S.repo, item.path, item.sha, `Delete ${item.name}`);
+    delete _treeCache[`${S.repo}:${S.user}`];
+    dbDel('th', `${S.repo}:${item.sha}:t`);
+    dbDel('full', `${S.repo}:${item.sha}:f`);
+    // Optimistic: remove from local list and re-render
+    S.images.splice(fromIdx, 1);
+    renderImageGrid();
+    hideUL();
+    toast('Deleted', 'ok');
+  } catch(e) { hideUL(); toast('Error: ' + e.message, 'bad'); await loadImages(); }
+}
+
+/* Swipe viewer */
+let tx = 0;
+$('vbody').addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive:true });
+$('vbody').addEventListener('touchend',   e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 55) { if (dx < 0) vNext(); else vPrev(); }
+});
+
+/* ═══════════════════════════════════════════════════════
+   UPLOAD
+═══════════════════════════════════════════════════════ */
+function triggerUp() { $('file-inp').click(); }
+
+async function handleUp(e) {
+  const files = [...e.target.files];
+  if (!files.length) return;
+  showUL('Uploading…');
+  const newItems = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    updUL(`${f.name} (${i+1}/${files.length})`, (i / files.length) * 100);
+    try {
+      const b64 = await f2b64(f);
+      const safe = f.name.replace(/[^a-zA-Z0-9._\-]/g, '_');
+      const path = `${S.album}/${Date.now()}_${safe}`;
+      const res = await putFile(S.repo, path, b64, `Upload ${safe}`);
+      delete _treeCache[`${S.repo}:${S.user}`];
+      // Build a local item entry from the API response
+      const content = res && res.content ? res.content : {};
+      newItems.push({
+        name: content.name || safe,
+        path: content.path || path,
+        sha:  content.sha  || '',
+        size: f.size,
+        type: 'file',
+        _b64: b64, // keep b64 to generate thumbnail immediately without re-fetching
+      });
+    } catch(err) { toast(`Failed: ${f.name}`, 'bad'); }
+  }
+  updUL('Done!', 100);
+  hideUL();
+  if (newItems.length) {
+    toast(`${newItems.length} photo${newItems.length>1?'s':''} uploaded!`, 'ok');
+    // Optimistic: append to local images and re-render
+    const startIdx = S.images.length;
+    S.images.push(...newItems);
+    // Append new thumbnail cells without wiping existing loaded ones
+    const grid = $('im-grid');
+    const emptyDiv = grid.querySelector('.empty');
+    if (emptyDiv) {
+      // Was empty, full re-render
+      renderImageGrid();
+    } else {
+      newItems.forEach((img, j) => {
+        const i = startIdx + j;
+        const cell = document.createElement('div');
+        cell.className = 'im-th';
+        cell.id = `th${i}`;
+        cell.innerHTML = '<div class="shimmer"></div>';
+        cell.onclick = () => thClick(i);
+        cell.setAttribute('ontouchstart', '');
+        cell.oncontextmenu = ev => { ev.preventDefault(); enterSel(i); };
+        grid.appendChild(cell);
+        // Generate thumbnail from the b64 we already have
+        (async () => {
+          try {
+            const el2 = await loadImg(`data:image/jpeg;base64,${img._b64}`);
+            const t = compress(el2, 130, 0.5);
+            if (img.sha) await dbSet('th', `${S.repo}:${img.sha}:t`, t);
+            const el = $(`th${i}`);
+            if (el) el.innerHTML = `<img src="${t}" alt="${img.name}" loading="lazy">`;
+          } catch { loadThumbEl(img, i); }
+        })();
+      });
+    }
+  }
+  e.target.value = '';
+}
+
+function f2b64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   SELECT MODE
+═══════════════════════════════════════════════════════ */
+function enterSel(i) {
+  S.selMode = true;
+  S.sel.clear();
+  S.sel.add(i);
+  $('sel-bar').classList.add('on');
+  updSelUI();
+}
+
+function exitSel() {
+  S.selMode = false;
+  S.sel.clear();
+  $('sel-bar').classList.remove('on');
+  document.querySelectorAll('.im-th').forEach(el => el.classList.remove('sel'));
+}
+
+function toggleSel(i) {
+  S.sel.has(i) ? S.sel.delete(i) : S.sel.add(i);
+  updSelUI();
+  if (!S.sel.size) exitSel();
+}
+
+function updSelUI() {
+  const n = S.sel.size;
+  $('sel-count').textContent = `${n} selected`;
+  document.querySelectorAll('.im-th').forEach((el, i) => el.classList.toggle('sel', S.sel.has(i)));
+}
+
+/* ═══════════════════════════════════════════════════════
+   TRANSFER (bulk)
+═══════════════════════════════════════════════════════ */
+function openTransfer() {
+  if (!S.sel.size) return;
+  $('m-transfer-list').innerHTML = S.albums
+    .filter(a => a.name !== S.album)
+    .map(a => `<div class="mitem" onclick="doTransfer('${a.name}')"><span style="font-size:20px">📁</span><span>${a.name}</span></div>`)
+    .join('') || '<div style="padding:16px;color:var(--text2);font-size:14px">No other albums. Create one first.</div>';
+  openM('m-transfer');
+}
+
+async function doTransfer(target) {
+  closeM('m-transfer');
+  const idxs = [...S.sel].sort((a, b) => b - a); // descending so splice doesn't shift
+  showUL('Moving photos…');
+
+  const moved = new Set([...S.sel]); // original indices
+  let failed = 0;
+  for (let i = 0; i < idxs.length; i++) {
+    const item = S.images[idxs[i]];
+    updUL(`Moving ${item.name}… (${i+1}/${idxs.length})`, ((i+1) / idxs.length) * 100);
+    try {
+      const b64 = item.size < 800000 ? await contentsB64(S.repo, item.path) : await blobB64(S.repo, item.sha);
+      const destPath = `${target}/${Date.now()}_${item.name}`;
+      await putFile(S.repo, destPath, b64, `Move ${item.name} to ${target}`);
+      await rmFile(S.repo, item.path, item.sha, `Remove ${item.name} from ${S.album}`);
+      delete _treeCache[`${S.repo}:${S.user}`];
+    } catch(e) { failed++; moved.delete(idxs[i]); toast(`Could not move ${item.name}`, 'bad'); }
+  }
+
+  hideUL();
+  // Optimistic: remove moved items from local list (descending order already)
+  idxs.forEach(i => { if (moved.has(i)) S.images.splice(i, 1); });
+  renderImageGrid();
+  if (!failed) toast('Photos moved!', 'ok');
+  else toast(`Moved ${idxs.length - failed}, ${failed} failed`, 'bad');
+}
+
+async function doDelete() {
+  const n = S.sel.size;
+  if (!confirm(`Delete ${n} photo${n>1?'s':''}? This cannot be undone.`)) return;
+  const idxs = [...S.sel].sort((a, b) => b - a); // descending for safe splice
+  showUL('Deleting…');
+
+  const deleted = [];
+  for (let i = 0; i < idxs.length; i++) {
+    const item = S.images[idxs[i]];
+    updUL(`Deleting ${item.name} (${i+1}/${idxs.length})`, ((i+1) / idxs.length) * 100);
+    try {
+      await rmFile(S.repo, item.path, item.sha, `Delete ${item.name}`);
+      delete _treeCache[`${S.repo}:${S.user}`];
+      dbDel('th', `${S.repo}:${item.sha}:t`);
+      dbDel('full', `${S.repo}:${item.sha}:f`);
+      deleted.push(idxs[i]);
+    } catch {}
+  }
+
+  hideUL();
+  // Optimistic: remove deleted items (already descending)
+  deleted.forEach(i => S.images.splice(i, 1));
+  renderImageGrid();
+  toast(`${deleted.length} photo${deleted.length>1?'s':''} deleted`, 'ok');
+}
+
+/* ═══════════════════════════════════════════════════════
+   REPO SWITCH
+═══════════════════════════════════════════════════════ */
+async function switchRepo(idx) {
+  S.repo = idx;
+  localStorage.setItem('gc_repo', idx);
+  $('rsel-albums').value = idx;
+  $('rsel-images').value = idx;
+  delete _treeCache[`${idx}:${S.user}`]; // fresh cache for new repo
+  try { await ensureRepo(idx); } catch {}
+
+  const active = document.querySelector('.screen.active')?.id;
+  if (active === 's-images') { S.album = 'Default'; await loadImages(); }
+  else await loadAlbums();
+}
+
+/* ═══════════════════════════════════════════════════════
+   STARTUP
+═══════════════════════════════════════════════════════ */
+async function init() {
+  db = await openDB();
+
+  if (S.token && S.user) {
+    try {
+      const u = await getUser();
+      S.user = u.login;
+      S.ava  = u.avatar_url;
+      localStorage.setItem('gc_usr', u.login);
+      localStorage.setItem('gc_ava', u.avatar_url);
+      await boot();
+      return;
+    } catch {
+      localStorage.removeItem('gc_tok');
+      S.token = '';
+    }
+  }
+
+  show('s-login');
+  hideLoader();
+}
+
+// Enter on PAT input
+$('pat-inp').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+// Enter on album name input
+$('al-name-inp').addEventListener('keydown', e => { if (e.key === 'Enter') doCreateAlbum(); });
+
+// Close modals on overlay click
+document.querySelectorAll('.mover').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on'); });
+});
+
+init();
+</script>
+</body>
+</html>
